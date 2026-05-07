@@ -2,7 +2,7 @@ import os
 import requests
 from datetime import datetime, timezone, timedelta
 
-from .config import ZHIPU_API_URL, ZHIPU_MODEL
+from .config import DEEPSEEK_API_URL, DEEPSEEK_MODEL
 
 SYSTEM_PROMPT = (
     "你是资深 AI 行业分析师,擅长把英文推文整理成精炼、干货十足的中文早报。"
@@ -43,7 +43,7 @@ def _build_tweets_block(tweets):
 
 
 def generate_morning_report(tweets):
-    api_key = os.environ["ZHIPU_API_KEY"]
+    api_key = os.environ["DEEPSEEK_API_KEY"]
 
     # 北京时间日期
     bj_now = datetime.now(timezone.utc) + timedelta(hours=8)
@@ -57,21 +57,22 @@ def generate_morning_report(tweets):
     )
 
     body = {
-        "model": ZHIPU_MODEL,
+        "model": DEEPSEEK_MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_msg},
         ],
         "temperature": 0.3,
         "max_tokens": 4096,
+        "stream": False,
     }
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
-    r = requests.post(ZHIPU_API_URL, json=body, headers=headers, timeout=180)
+    r = requests.post(DEEPSEEK_API_URL, json=body, headers=headers, timeout=180)
     if not r.ok:
-        raise RuntimeError(f"Zhipu API error {r.status_code}: {r.text[:500]}")
+        raise RuntimeError(f"DeepSeek API error {r.status_code}: {r.text[:500]}")
     data = r.json()
     return data["choices"][0]["message"]["content"].strip()

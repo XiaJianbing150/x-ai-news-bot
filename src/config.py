@@ -49,7 +49,7 @@ ARXIV_MAX_PAPERS = 8
 HOURS_LOOKBACK = int(os.environ.get("HOURS_LOOKBACK", "24"))
 MAX_TWEETS_PER_BLOGGER = int(os.environ.get("MAX_TWEETS_PER_BLOGGER", "5"))
 
-ZHIPU_MODEL = os.environ.get("ZHIPU_MODEL", "glm-4-plus")
-ZHIPU_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
 
 REQUEST_TIMEOUT = 25
