@@ -2,7 +2,7 @@ import os
 import requests
 from datetime import datetime, timezone, timedelta
 
-from .config import DEEPSEEK_API_URL, DEEPSEEK_MODEL, HOURS_LOOKBACK
+from .config import DEEPSEEK_API_URL, DEEPSEEK_MODEL, DEEPSEEK_THINKING, HOURS_LOOKBACK
 
 SYSTEM_PROMPT = (
     "你是资深 AI 行业分析师,擅长把英文推文整理成精炼、干货十足的中文早报。"
@@ -68,15 +68,23 @@ def generate_morning_report(tweets):
             {"role": "user", "content": user_msg},
         ],
         "temperature": 0.3,
-        "max_tokens": 4096,
+        "max_tokens": 8192,
         "stream": False,
     }
+    # v4-pro / reasoner 类模型开启深度思考
+    use_thinking = DEEPSEEK_THINKING and ("pro" in DEEPSEEK_MODEL or "reasoner" in DEEPSEEK_MODEL)
+    if use_thinking:
+        body["thinking"] = {"type": "enabled"}
+        body["reasoning_effort"] = "high"
+        # thinking 模型 temperature 通常忽略,删掉避免警告
+        body.pop("temperature", None)
+    print(f"  model={DEEPSEEK_MODEL}  thinking={'on (effort=high)' if use_thinking else 'off'}")
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
-    r = requests.post(DEEPSEEK_API_URL, json=body, headers=headers, timeout=180)
+    r = requests.post(DEEPSEEK_API_URL, json=body, headers=headers, timeout=600)
     if not r.ok:
         raise RuntimeError(f"DeepSeek API error {r.status_code}: {r.text[:500]}")
     data = r.json()

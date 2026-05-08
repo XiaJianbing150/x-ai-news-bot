@@ -56,7 +56,9 @@ ARXIV_MAX_PAPERS = 8
 HOURS_LOOKBACK = int(os.environ.get("HOURS_LOOKBACK", "168"))
 MAX_TWEETS_PER_BLOGGER = int(os.environ.get("MAX_TWEETS_PER_BLOGGER", "5"))
 
-DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+# 是否启用深度思考(仅 v4-pro / reasoner 类模型支持,显著提升推理质量但更慢更贵)
+DEEPSEEK_THINKING = os.environ.get("DEEPSEEK_THINKING", "1") not in ("0", "false", "False", "")
 
 REQUEST_TIMEOUT = 25
