@@ -1,43 +1,43 @@
 import os
 
 # 关注的 X (Twitter) AI 大 V / 机构 (handle, 不带 @)
+# 关注重点: AI 应用 / 工具 / 新玩法 / Anthropic 产品 (用户是 Claude 付费会员)
 BLOGGERS = [
-    # 大佬
+    # ⭐ Anthropic 系(重点关注:用户是 Claude 会员)
+    "AnthropicAI",     # Anthropic 官方
+    "claudeai",        # Claude 产品账号
+    "darioamodei",     # Dario Amodei - Anthropic CEO
+    "alexalbert__",    # Alex Albert - Anthropic DevRel
+    "AmandaAskell",    # Amanda Askell - Claude 行为/性格设计
+
+    # 核心大佬观点(只挑高产、有新意的)
     "sama",            # Sam Altman (OpenAI CEO)
-    "karpathy",        # Andrej Karpathy
-    "ylecun",          # Yann LeCun (Meta)
-    "AndrewYNg",       # Andrew Ng
+    "karpathy",        # Andrej Karpathy - "vibe coding"
     "demishassabis",   # Demis Hassabis (DeepMind CEO)
+    "gdb",             # Greg Brockman (OpenAI 总裁)
     "drjimfan",        # Jim Fan (NVIDIA)
-    "ilyasut",         # Ilya Sutskever
-    # 机构
-    "OpenAI",
-    "AnthropicAI",
-    "claudeai",        # Claude / Anthropic 产品账号(测试探针:近期肯定有推)
-    "GoogleDeepMind",
-    "GoogleAI",
-    "MistralAI",
-    # 资讯/聚合
-    "_akhaliq",
-    "rohanpaul_ai",
-    "omarsar0",
-    # AI 应用 / 工程实践
+
+    # AI 应用 / 工具 / 新玩法 高产博主
     "simonw",          # Simon Willison - LLM 实战与工具
     "swyx",            # Shawn Wang - AI Engineer / Latent Space
     "mckaywrigley",    # Mckay Wrigley - build-in-public AI 应用
-    "LangChainAI",     # LangChain 官方
-    "perplexity_ai",   # Perplexity 官方
-    # AI 应用热门讨论 (top 10)
-    "emollick",        # Ethan Mollick - Wharton 教授,每日 AI 用例
-    "levelsio",        # Pieter Levels - 独立 AI/SaaS 创业
-    "gdb",             # Greg Brockman - OpenAI 总裁
-    "alexalbert__",    # Alex Albert - Anthropic DevRel
-    "hwchase17",       # Harrison Chase - LangChain 创始人
-    "HamelHusain",     # AI 评测 / RAG / 工程深度
+    "emollick",        # Ethan Mollick - 每日 AI 用例
+    "levelsio",        # Pieter Levels - 独立 AI/SaaS
+    "bilawalsidhu",    # Bilawal Sidhu - AI 创意工具/玩法
+    "minchoi",         # Min Choi - AI demo / 新工具速报
+    "bentossell",      # Ben Tossell - There's An AI For That
+    "LinusEkenstam",   # Linus Ekenstam - AI 应用教程
+    "hwchase17",       # Harrison Chase - LangChain
     "rauchg",          # Guillermo Rauch - Vercel / v0
-    "huggingface",     # HuggingFace 官方
-    "deepseek_ai",     # DeepSeek 官方
-    "cursor_ai",       # Cursor 官方
+
+    # 产品官方账号
+    "OpenAI",
+    "GoogleDeepMind",
+    "huggingface",
+    "perplexity_ai",
+    "cursor_ai",
+    "deepseek_ai",
+    "LangChainAI",
 ]
 
 # 抓推文模板 - 按顺序 fallback,失败自动切下一个。
