@@ -20,6 +20,12 @@ BLOGGERS = [
     "_akhaliq",
     "rohanpaul_ai",
     "omarsar0",
+    # AI 应用 / 工程实践
+    "simonw",          # Simon Willison - LLM 实战与工具
+    "swyx",            # Shawn Wang - AI Engineer / Latent Space
+    "mckaywrigley",    # Mckay Wrigley - build-in-public AI 应用
+    "LangChainAI",     # LangChain 官方
+    "perplexity_ai",   # Perplexity 官方
 ]
 
 # 抓推文模板 - 按顺序 fallback,失败自动切下一个。
