@@ -56,6 +56,10 @@ TWITTER_FEED_TEMPLATES = [
     "https://rsshub.pseudoyu.com/twitter/user/{user}",
 ]
 
+# 终极兜底:Jina Reader 把 x.com 页面渲染成 markdown,稳定但无逐条时间戳
+# 设 JINA_API_KEY (可选) 提升速率限制
+JINA_READER_URL = "https://r.jina.ai/https://x.com/{user}"
+
 # 兜底:即使 Twitter 全挂,也能从 arXiv 抓到当日 AI 论文,保证早报有内容
 ARXIV_FEEDS = [
     "http://export.arxiv.org/rss/cs.AI",
