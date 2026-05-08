@@ -13,6 +13,7 @@ BLOGGERS = [
     # 机构
     "OpenAI",
     "AnthropicAI",
+    "claudeai",        # Claude / Anthropic 产品账号(测试探针:近期肯定有推)
     "GoogleDeepMind",
     "GoogleAI",
     "MistralAI",
