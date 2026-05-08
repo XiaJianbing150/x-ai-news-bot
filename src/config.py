@@ -27,6 +27,17 @@ BLOGGERS = [
     "mckaywrigley",    # Mckay Wrigley - build-in-public AI 应用
     "LangChainAI",     # LangChain 官方
     "perplexity_ai",   # Perplexity 官方
+    # AI 应用热门讨论 (top 10)
+    "emollick",        # Ethan Mollick - Wharton 教授,每日 AI 用例
+    "levelsio",        # Pieter Levels - 独立 AI/SaaS 创业
+    "gdb",             # Greg Brockman - OpenAI 总裁
+    "alexalbert__",    # Alex Albert - Anthropic DevRel
+    "hwchase17",       # Harrison Chase - LangChain 创始人
+    "HamelHusain",     # AI 评测 / RAG / 工程深度
+    "rauchg",          # Guillermo Rauch - Vercel / v0
+    "huggingface",     # HuggingFace 官方
+    "deepseek_ai",     # DeepSeek 官方
+    "cursor_ai",       # Cursor 官方
 ]
 
 # 抓推文模板 - 按顺序 fallback,失败自动切下一个。
