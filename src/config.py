@@ -46,7 +46,7 @@ ARXIV_FEEDS = [
 ]
 ARXIV_MAX_PAPERS = 8
 
-HOURS_LOOKBACK = int(os.environ.get("HOURS_LOOKBACK", "24"))
+HOURS_LOOKBACK = int(os.environ.get("HOURS_LOOKBACK", "168"))
 MAX_TWEETS_PER_BLOGGER = int(os.environ.get("MAX_TWEETS_PER_BLOGGER", "5"))
 
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")

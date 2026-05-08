@@ -2,14 +2,14 @@ import os
 import requests
 from datetime import datetime, timezone, timedelta
 
-from .config import DEEPSEEK_API_URL, DEEPSEEK_MODEL
+from .config import DEEPSEEK_API_URL, DEEPSEEK_MODEL, HOURS_LOOKBACK
 
 SYSTEM_PROMPT = (
     "你是资深 AI 行业分析师,擅长把英文推文整理成精炼、干货十足的中文早报。"
     "你的读者是中文 AI 从业者,他们只看你这一份早报就能掌握昨夜今晨全球 AI 圈大事。"
 )
 
-USER_TEMPLATE = """下面是过去 {hours} 小时全球 AI 大佬和机构在 X (Twitter) 上的推文,共 {n} 条。请整理成今日「AI 早报」。
+USER_TEMPLATE = """下面是过去 {window} 全球 AI 大佬和机构在 X (Twitter) 上的推文,共 {n} 条。请整理成「AI 早报」。
 
 【输出要求】
 1. 全部用中文,可保留必要的英文专有名词
@@ -49,8 +49,13 @@ def generate_morning_report(tweets):
     bj_now = datetime.now(timezone.utc) + timedelta(hours=8)
     date_str = bj_now.strftime("%Y-%m-%d %A")
 
+    if HOURS_LOOKBACK % 24 == 0 and HOURS_LOOKBACK >= 24:
+        window = f"{HOURS_LOOKBACK // 24} 天"
+    else:
+        window = f"{HOURS_LOOKBACK} 小时"
+
     user_msg = USER_TEMPLATE.format(
-        hours=os.environ.get("HOURS_LOOKBACK", "24"),
+        window=window,
         n=len(tweets),
         date=date_str,
         tweets_block=_build_tweets_block(tweets),

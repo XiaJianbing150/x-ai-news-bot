@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       hours_lookback:
-        description: '回溯小时数 (默认 24)'
+        description: '回溯小时数 (默认 168 = 7 天)'
         required: false
-        default: '24'
+        default: '168'
 
 permissions:
   contents: read
@@ -36,5 +36,5 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          HOURS_LOOKBACK: ${{ inputs.hours_lookback || '24' }}
+          HOURS_LOOKBACK: ${{ inputs.hours_lookback || '168' }}
         run: python main.py
