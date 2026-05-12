@@ -4,6 +4,7 @@ import time
 import requests
 import feedparser
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 
 from .config import (
     BLOGGERS,
@@ -144,8 +145,8 @@ def _parse_jina_markdown(username: str, md: str):
         cleaned = cleaned.strip()
         if not cleaned:
             continue
-        # 跳过明显的元数据/噪音
-        if len(cleaned) < 20:
+        # 跳过明显的元数据/噪音 (放宽到 8 字符,留住 "Keep thinking." 这种短推)
+        if len(cleaned) < 8:
             continue
         low = cleaned.lower()
         if low in ("quote", "show this thread", "claude", username.lower()):
@@ -213,6 +214,110 @@ def fetch_all_tweets():
         # 用 Jina 时降速避免 rate limit
         time.sleep(2.0)
     return all_tweets
+
+
+def fetch_openai_blog(hours_lookback: int = None):
+    """从 OpenAI 官博 RSS 抓产品更新 (权威源)。
+    比推文窗口多 48h: 官博发布常比 X 公告晚 1-2 天,且不希望漏掉边界日。
+    """
+    if hours_lookback is None:
+        hours_lookback = HOURS_LOOKBACK + 48
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours_lookback)
+    try:
+        r = _http_get("https://openai.com/news/rss.xml")
+    except Exception as e:
+        print(f"  OpenAI blog 抓取失败: {e!r}")
+        return []
+    if r.status_code != 200:
+        print(f"  OpenAI blog HTTP {r.status_code}")
+        return []
+    items = re.findall(r"<item>(.*?)</item>", r.text, re.DOTALL)
+    out = []
+    for it in items:
+        tm = re.search(r"<title><!\[CDATA\[(.*?)\]\]></title>", it) or re.search(r"<title>(.*?)</title>", it)
+        title = tm.group(1).strip() if tm else ""
+        lm = re.search(r"<link>(.*?)</link>", it)
+        link = lm.group(1).strip() if lm else ""
+        pm = re.search(r"<pubDate>(.*?)</pubDate>", it)
+        dm = re.search(r"<description><!\[CDATA\[(.*?)\]\]></description>", it, re.DOTALL) or re.search(r"<description>(.*?)</description>", it, re.DOTALL)
+        desc = _strip_html(dm.group(1)) if dm else ""
+        if not (title and link and pm):
+            continue
+        try:
+            pub_dt = parsedate_to_datetime(pm.group(1)).astimezone(timezone.utc)
+        except Exception:
+            continue
+        if pub_dt < cutoff:
+            continue
+        text = title if not desc else f"{title}\n{desc[:400]}"
+        out.append({
+            "user": "OpenAI官博",
+            "text": text,
+            "link": link,
+            "published": pub_dt.isoformat(),
+            "source": "openai-blog",
+        })
+    print(f"  OpenAI blog -> {len(out)} posts")
+    return out
+
+
+_ANTHROPIC_NEWS_RE = re.compile(
+    r"\[(?:Product\s+|Announcements\s+|Policy\s+|Interpretability\s+|Society\s+|Safety\s+)?"
+    r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})"
+    r"\s+(?:Product\s+|Announcements\s+|Policy\s+|Interpretability\s+|Society\s+|Safety\s+)?"
+    r"(?:####\s+)?"
+    r"([^\[\]]+?)\]\((https://www\.anthropic\.com/[^\)]+)\)",
+    re.IGNORECASE,
+)
+
+
+def fetch_anthropic_news(hours_lookback: int = None):
+    """从 anthropic.com/news 抓产品/公告 (Jina 渲染 markdown)。
+    +48h 缓冲避免边界日被误过滤。
+    """
+    if hours_lookback is None:
+        hours_lookback = HOURS_LOOKBACK + 48
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours_lookback)
+    url = "https://r.jina.ai/https://www.anthropic.com/news"
+    headers = {"Accept": "text/markdown"}
+    api_key = os.environ.get("JINA_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    try:
+        r = _http_get(url, headers=headers)
+    except Exception as e:
+        print(f"  Anthropic news 抓取失败: {e!r}")
+        return []
+    if r.status_code != 200:
+        print(f"  Anthropic news HTTP {r.status_code}")
+        return []
+    text = r.text
+    out, seen = [], set()
+    for m in _ANTHROPIC_NEWS_RE.finditer(text):
+        date_str, title, link = m.group(1), m.group(2).strip(), m.group(3)
+        if link in seen:
+            continue
+        seen.add(link)
+        try:
+            # Anthropic news 只给日期(无时分),按当日 23:59 处理,避免边界日被误过滤
+            pub_dt = datetime.strptime(date_str, "%b %d, %Y").replace(
+                hour=23, minute=59, tzinfo=timezone.utc,
+            )
+        except Exception:
+            continue
+        if pub_dt < cutoff:
+            continue
+        # title 可能带描述,截一段
+        title = title[:400]
+        out.append({
+            "user": "Anthropic官博",
+            "text": title,
+            "link": link,
+            "published": pub_dt.isoformat(),
+            "source": "anthropic-news",
+        })
+    print(f"  Anthropic news -> {len(out)} posts")
+    return out
 
 
 def fetch_arxiv_papers():

@@ -10,7 +10,11 @@ SYSTEM_PROMPT = (
     "其它 AI 公司(Google / Meta / DeepSeek / Mistral / Perplexity 等)的产品/动态一律不出现。"
 )
 
-USER_TEMPLATE = """今天是 {date}。下面是过去 {window} Anthropic / OpenAI 相关账号和两位重度使用者(simonw, karpathy)在 X 上的推文,共 {n} 条。
+USER_TEMPLATE = """今天是 {date}。下面是过去 {window} 内容,共 {n} 条,来源:
+- @AnthropicAI / @claudeai / @darioamodei / @alexalbert__ / @AmandaAskell 的 X 推文
+- @OpenAI / @sama / @gdb 的 X 推文
+- @simonw / @karpathy 的 X 实操分享
+- 标 user="Anthropic官博" / "OpenAI官博" 的条目: 来自官方博客,**这是产品更新最权威来源,优先采用**
 请整理成「Anthropic & OpenAI 应用速报」。
 
 【硬性筛选规则 — 必须严格遵守】
@@ -37,6 +41,7 @@ C. 判断不准时,优先丢弃。宁缺毋滥 — 输出短没关系,不要凑�
 📌 其他值得一看(必须仍是 Anthropic/OpenAI 相关)
 
 【🅰️ Claude / 🅾️ OpenAI 产品更新详解 — 特别处理】
+**优先收录**所有 user="Anthropic官博" 和 "OpenAI官博" 的条目(这两家近一周的所有产品/公告),X 推文作为补充。
 对这两个章节里每一条,用下面三段式展开(三段都要,无信息则填 "—"):
 
 <b>{{功能名}}</b>
