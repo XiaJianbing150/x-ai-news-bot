@@ -2,7 +2,7 @@ import sys
 import traceback
 from datetime import datetime, timezone, timedelta
 
-from src.fetcher import fetch_all_tweets, fetch_arxiv_papers
+from src.fetcher import fetch_all_tweets, fetch_arxiv_papers, fetch_github_trending, format_trending_block
 from src.summarizer import generate_morning_report
 from src.telegram import send_to_telegram
 
@@ -52,6 +52,17 @@ def main():
     print("---- 预览 ----")
     print(report[:500])
     print("--------------")
+
+    # 3.5 抓 GitHub Trending top5,直接拼到末尾(不过 LLM,精确不走样)
+    print("\n抓取 GitHub Trending Top 5...")
+    try:
+        trending = fetch_github_trending(top_n=5, since="daily")
+        trending_block = format_trending_block(trending)
+        if trending_block:
+            report = report + "\n\n" + trending_block
+            print(f"  附加 {len(trending)} 个 trending 仓库,总长度 {len(report)} 字符")
+    except Exception as e:
+        print(f"GitHub Trending 抓取失败(忽略): {e!r}")
 
     # 4. 推送
     print("\n[3/3] 推送到 Telegram...")
