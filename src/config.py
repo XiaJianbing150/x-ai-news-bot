@@ -1,43 +1,24 @@
 import os
 
 # 关注的 X (Twitter) AI 大 V / 机构 (handle, 不带 @)
-# 关注重点: AI 应用 / 工具 / 新玩法 / Anthropic 产品 (用户是 Claude 付费会员)
+# 强约束: 只订阅 Anthropic 和 OpenAI 强相关账号 + 两个高频使用这两家产品的实战派
+# 内容偏好: 最新、可操作的产品更新和实战玩法,其它 AI 公司/通用资讯一律不要
 BLOGGERS = [
-    # ⭐ Anthropic 系(重点关注:用户是 Claude 会员)
+    # 🅰️ Anthropic 系
     "AnthropicAI",     # Anthropic 官方
     "claudeai",        # Claude 产品账号
-    "darioamodei",     # Dario Amodei - Anthropic CEO
-    "alexalbert__",    # Alex Albert - Anthropic DevRel
-    "AmandaAskell",    # Amanda Askell - Claude 行为/性格设计
+    "darioamodei",     # Dario Amodei - CEO
+    "alexalbert__",    # Alex Albert - DevRel,常发 Claude 实战技巧
+    "AmandaAskell",    # Amanda Askell - Claude 行为/性格
 
-    # 核心大佬观点(只挑高产、有新意的)
-    "sama",            # Sam Altman (OpenAI CEO)
-    "karpathy",        # Andrej Karpathy - "vibe coding"
-    "demishassabis",   # Demis Hassabis (DeepMind CEO)
-    "gdb",             # Greg Brockman (OpenAI 总裁)
-    "drjimfan",        # Jim Fan (NVIDIA)
+    # 🅾️ OpenAI 系
+    "OpenAI",          # OpenAI 官方
+    "sama",            # Sam Altman - CEO
+    "gdb",             # Greg Brockman - 总裁
 
-    # AI 应用 / 工具 / 新玩法 高产博主
-    "simonw",          # Simon Willison - LLM 实战与工具
-    "swyx",            # Shawn Wang - AI Engineer / Latent Space
-    "mckaywrigley",    # Mckay Wrigley - build-in-public AI 应用
-    "emollick",        # Ethan Mollick - 每日 AI 用例
-    "levelsio",        # Pieter Levels - 独立 AI/SaaS
-    "bilawalsidhu",    # Bilawal Sidhu - AI 创意工具/玩法
-    "minchoi",         # Min Choi - AI demo / 新工具速报
-    "bentossell",      # Ben Tossell - There's An AI For That
-    "LinusEkenstam",   # Linus Ekenstam - AI 应用教程
-    "hwchase17",       # Harrison Chase - LangChain
-    "rauchg",          # Guillermo Rauch - Vercel / v0
-
-    # 产品官方账号
-    "OpenAI",
-    "GoogleDeepMind",
-    "huggingface",
-    "perplexity_ai",
-    "cursor_ai",
-    "deepseek_ai",
-    "LangChainAI",
+    # 🧰 重度使用者(只挑实操、上手向)
+    "simonw",          # Simon Willison - LLM/Claude/GPT 详尽实战博客
+    "karpathy",        # Andrej Karpathy - 高密度实操观察
 ]
 
 # 抓推文模板 - 按顺序 fallback,失败自动切下一个。
