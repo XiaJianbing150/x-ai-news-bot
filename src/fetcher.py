@@ -246,3 +246,78 @@ def fetch_arxiv_papers():
     papers = papers[:ARXIV_MAX_PAPERS]
     print(f"  arXiv -> {len(papers)} papers")
     return papers
+
+
+_GH_REPO_HEAD = re.compile(
+    r'##\s*\[([\w\-_.]+)\s*/\s*([\w\-_.]+)\]\((https://github\.com/[\w\-_./]+)\)\s*\n+([^\n]+)',
+    re.MULTILINE,
+)
+
+
+def fetch_github_trending(top_n: int = 5, since: str = "daily"):
+    """抓 github.com/trending top N,通过 Jina Reader。
+    since: daily | weekly | monthly
+    """
+    url = f"https://r.jina.ai/https://github.com/trending?since={since}"
+    headers = {"Accept": "text/markdown"}
+    api_key = os.environ.get("JINA_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    try:
+        r = _http_get(url, headers=headers)
+    except Exception as e:
+        print(f"  GitHub trending fetch failed: {e!r}")
+        return []
+    if r.status_code != 200:
+        print(f"  GitHub trending: HTTP {r.status_code}")
+        return []
+
+    text = r.text
+    repos = []
+    for m in _GH_REPO_HEAD.finditer(text):
+        owner, name, repo_url, desc = m.group(1), m.group(2), m.group(3), m.group(4).strip()
+        # 跳过明显的导航假命中(GitHub trending 真正的 repo URL 一定是 /owner/repo)
+        if repo_url.count("/") != 4:
+            continue
+        chunk = text[m.end():m.end() + 1500]
+        stars_today = ""
+        sm = re.search(r"(\d[\d,]*)\s*stars?\s*today", chunk)
+        if sm:
+            stars_today = sm.group(1)
+        lang_m = re.search(r"\n([A-Z][\w+#-]*)\[", chunk)
+        lang = lang_m.group(1) if lang_m else ""
+        repos.append({
+            "owner": owner,
+            "name": name,
+            "url": repo_url,
+            "desc": desc[:200],
+            "lang": lang,
+            "stars_today": stars_today,
+        })
+        if len(repos) >= top_n:
+            break
+    print(f"  GitHub trending -> {len(repos)} repos")
+    return repos
+
+
+def format_trending_block(repos):
+    """把 trending 列表渲染成 Telegram HTML,作为早报附录。"""
+    if not repos:
+        return ""
+    lines = ["", "<b>🔥 GitHub Trending · 今日 Top 5</b>"]
+    for i, r in enumerate(repos, 1):
+        meta_parts = []
+        if r.get("lang"):
+            meta_parts.append(r["lang"])
+        if r.get("stars_today"):
+            meta_parts.append(f"⭐ +{r['stars_today']}/today")
+        meta = "  ".join(meta_parts)
+        # 转义描述里的 HTML 特殊字符
+        desc = r["desc"].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        lines.append(
+            f'{i}. <a href="{r["url"]}"><b>{r["owner"]}/{r["name"]}</b></a>'
+            + (f"  <i>{meta}</i>" if meta else "")
+        )
+        if desc:
+            lines.append(f"   {desc}")
+    return "\n".join(lines)
