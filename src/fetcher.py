@@ -8,6 +8,7 @@ from email.utils import parsedate_to_datetime
 
 from .config import (
     BLOGGERS,
+    SKIP_X_ACCOUNTS,
     TWITTER_FEED_TEMPLATES,
     JINA_READER_URL,
     ARXIV_FEEDS,
@@ -207,6 +208,9 @@ def fetch_user_tweets(username: str):
 def fetch_all_tweets():
     all_tweets = []
     for u in BLOGGERS:
+        if u in SKIP_X_ACCOUNTS:
+            print(f"  @{u:<18} -> SKIP (X 只返回 pinned 老闻,改用官博源)")
+            continue
         tweets, source = fetch_user_tweets(u)
         host = source.split("/")[2] if source and "//" in source else (source or "n/a")
         print(f"  @{u:<18} -> {len(tweets):>2} tweets  ({host})")
