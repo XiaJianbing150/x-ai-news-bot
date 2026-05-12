@@ -10,11 +10,13 @@ SYSTEM_PROMPT = (
     "其它 AI 公司(Google / Meta / DeepSeek / Mistral / Perplexity 等)的产品/动态一律不出现。"
 )
 
-USER_TEMPLATE = """今天是 {date}。下面是过去 {window} 内容,共 {n} 条,来源:
-- @AnthropicAI / @claudeai / @darioamodei / @alexalbert__ / @AmandaAskell 的 X 推文
-- @OpenAI / @sama / @gdb 的 X 推文
-- @simonw / @karpathy 的 X 实操分享
-- 标 user="Anthropic官博" / "OpenAI官博" 的条目: 来自官方博客,**这是产品更新最权威来源,优先采用**
+USER_TEMPLATE = """今天是 {date}。下面是过去 {window} 内容,共 {n} 条。
+
+【来源 & 时效】每条前会有 tag 标注:
+- [官博·权威·近7天]: 来自 Anthropic / OpenAI 官方博客,**确保是近 7 天发布,内容准确,优先采用**
+- [X·RSS·有日期]: 来自 X 推文,RSS 通道,**已按 7 天窗口过滤,内容时效可信**
+- [X·Jina·时效未知,可能是数月前的pinned推文]: 来自 X 但 Jina 抓取,**没有时间戳。X.com 对未登录访问只返回 pinned/featured,实测内容多为 2025-09/10 的老闻。**对这类内容请极度警惕,只有当内容明显是新的(新功能/未发布过的产品/有时间用语如"今天""this week")才能用,任何看起来像已发布的产品(Sonnet 4.5、Haiku 4.5、Opus 4.x、Claude 桌面应用、MCP 协议等)一律丢弃
+
 请整理成「Anthropic & OpenAI 应用速报」。
 
 【硬性筛选规则 — 必须严格遵守】
@@ -79,7 +81,17 @@ def _build_tweets_block(tweets):
         text = t["text"].replace("\n", " ").strip()
         if len(text) > 500:
             text = text[:500] + "..."
-        lines.append(f"{i}. @{t['user']}: {text}\n   链接: {t['link']}")
+        # 标注来源,提示 LLM 区分权威 vs 时效不确定
+        src = t.get("source", "")
+        if src in ("openai-blog", "anthropic-news"):
+            tag = "[官博·权威·近7天]"
+        elif src == "rss":
+            tag = "[X·RSS·有日期]"
+        elif src == "jina":
+            tag = "[X·Jina·时效未知,可能是数月前的pinned推文]"
+        else:
+            tag = ""
+        lines.append(f"{i}. @{t['user']} {tag}: {text}\n   链接: {t['link']}")
     return "\n\n".join(lines)
 
 
