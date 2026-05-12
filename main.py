@@ -2,7 +2,14 @@ import sys
 import traceback
 from datetime import datetime, timezone, timedelta
 
-from src.fetcher import fetch_all_tweets, fetch_arxiv_papers, fetch_github_trending, format_trending_block
+from src.fetcher import (
+    fetch_all_tweets,
+    fetch_arxiv_papers,
+    fetch_github_trending,
+    format_trending_block,
+    fetch_openai_blog,
+    fetch_anthropic_news,
+)
 from src.summarizer import generate_morning_report
 from src.telegram import send_to_telegram
 
@@ -14,29 +21,35 @@ def _bj_now_str():
 def main():
     print(f"=== AI 早报 Bot 启动  ({_bj_now_str()} 北京时间) ===")
 
-    # 1. 抓推文
-    print("\n[1/3] 抓取 X 推文...")
+    # 1. 抓推文 + 官博 (官博是产品更新的权威源,优先级高于 X)
+    print("\n[1/3] 抓取数据源...")
+    items = []
+
+    print("  --- X 推文 ---")
     try:
         tweets = fetch_all_tweets()
+        items.extend(tweets)
     except Exception as e:
         traceback.print_exc()
-        send_to_telegram(f"⚠️ AI 早报失败: 抓取推文异常\n<code>{str(e)[:500]}</code>")
+        send_to_telegram(f"⚠️ AI 早报失败: 抓取 X 推文异常\n<code>{str(e)[:500]}</code>")
         sys.exit(1)
-    print(f"\n共抓到 {len(tweets)} 条推文")
 
-    # 2. 推文不够时,补一份 arXiv 论文兜底
-    items = list(tweets)
-    if len(tweets) < 5:
-        print("\n推文太少,补抓 arXiv 论文兜底...")
-        try:
-            papers = fetch_arxiv_papers()
-            items.extend(papers)
-        except Exception as e:
-            print(f"arXiv 兜底失败(忽略): {e!r}")
+    print("  --- Anthropic 官博 ---")
+    try:
+        items.extend(fetch_anthropic_news())
+    except Exception as e:
+        print(f"  Anthropic news 失败(忽略): {e!r}")
 
+    print("  --- OpenAI 官博 ---")
+    try:
+        items.extend(fetch_openai_blog())
+    except Exception as e:
+        print(f"  OpenAI blog 失败(忽略): {e!r}")
+
+    print(f"\n共抓到 {len(items)} 条内容")
     if not items:
         send_to_telegram(
-            "⚠️ <b>AI 早报</b>\n今日所有数据源都失败了 (Nitter/RSSHub/arXiv 全挂),稍后会自动重试。"
+            "⚠️ <b>AI 早报</b>\n所有数据源都失败了,稍后会自动重试。"
         )
         sys.exit(0)
 
