@@ -5,6 +5,8 @@ import os
 # 内容偏好: 最新、可操作的产品更新和实战玩法,其它 AI 公司/通用资讯一律不要
 BLOGGERS = [
     # 🅰️ Anthropic 系
+    # 注意: AnthropicAI / claudeai 在 SKIP_X_ACCOUNTS 里,因为 X 抓取只能拿到 pinned 老闻,
+    # 同样内容会从官博更准更新地拿到
     "AnthropicAI",     # Anthropic 官方
     "claudeai",        # Claude 产品账号
     "darioamodei",     # Dario Amodei - CEO
@@ -12,7 +14,7 @@ BLOGGERS = [
     "AmandaAskell",    # Amanda Askell - Claude 行为/性格
 
     # 🅾️ OpenAI 系
-    "OpenAI",          # OpenAI 官方
+    "OpenAI",          # OpenAI 官方 (同样在 SKIP_X_ACCOUNTS)
     "sama",            # Sam Altman - CEO
     "gdb",             # Greg Brockman - 总裁
 
@@ -20,6 +22,11 @@ BLOGGERS = [
     "simonw",          # Simon Willison - LLM/Claude/GPT 详尽实战博客
     "karpathy",        # Andrej Karpathy - 高密度实操观察
 ]
+
+# 这几个账号跳过 X 抓取,因为 X.com 对未登录访问只返回 pinned + featured 老闻
+# (Jina 拿到的是几个月前的 Sonnet 4.5 / Haiku 4.5 / MCP 等已发布产品)。
+# 这些公司的产品更新有更权威、更新的官博源 (fetch_anthropic_news / fetch_openai_blog)。
+SKIP_X_ACCOUNTS = {"AnthropicAI", "claudeai", "OpenAI"}
 
 # 抓推文模板 - 按顺序 fallback,失败自动切下一个。
 # 2026 年公共 RSSHub 对 Twitter 普遍 503,所以优先 Nitter 系镜像。
