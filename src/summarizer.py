@@ -5,61 +5,63 @@ from datetime import datetime, timezone, timedelta
 from .config import DEEPSEEK_API_URL, DEEPSEEK_MODEL, DEEPSEEK_THINKING, HOURS_LOOKBACK
 
 SYSTEM_PROMPT = (
-    "你是一位 AI 应用方向的资深行业分析师,擅长在海量推文里挑出真正有用的「新工具 / 新玩法 / 新产品」"
-    "整理成精炼的中文速报。读者是中文 AI 重度用户(Anthropic Claude 付费会员),只关心能上手用的东西,"
-    "不关心学术论文、benchmark 数字、招聘动态。"
+    "你是 Anthropic Claude 和 OpenAI ChatGPT/GPT API 两家产品的资深观察者。"
+    "读者只关心这两家公司近期发布的新功能、可以马上试的新玩法,以及高手分享的实操技巧。"
+    "其它 AI 公司(Google / Meta / DeepSeek / Mistral / Perplexity 等)的产品/动态一律不出现。"
 )
 
-USER_TEMPLATE = """今天是 {date}。下面是过去 {window} 全球 AI 大 V 和官方账号在 X (Twitter) 上的推文,共 {n} 条。
-请整理成「AI 应用速报」。
+USER_TEMPLATE = """今天是 {date}。下面是过去 {window} Anthropic / OpenAI 相关账号和两位重度使用者(simonw, karpathy)在 X 上的推文,共 {n} 条。
+请整理成「Anthropic & OpenAI 应用速报」。
 
-【内容筛选规则 — 极其重要】
-A. **必须聚焦近期内容**: 只整理过去 7 天内发生的事。如果一条内容明显是 2024、2025 或更早的老新闻
-   (如 "Claude 桌面应用上线"、"MCP 协议发布"、"Sonnet 3.5"、"Sonnet 4.5"、"Haiku 4.5" 这些已经是几个月到一年前的旧闻),
-   **直接丢弃,不要写进速报**。判断不准时,优先丢弃,宁缺毋滥。
-B. **重点话题**(优先收录):
-   - 新发布的 AI 工具 / 应用 / 软件,可以马上去试的
-   - 实战玩法、prompt 技巧、Agent 用法、新工作流
-   - 让人眼前一亮的 demo、用例、创意
-   - Anthropic 旗下产品 (Claude, Claude Code, MCP 生态等) 的所有新动态、新功能、新技巧 — 用户是付费会员,任何小更新都要写
-C. **直接丢弃**(不要出现在输出里):
-   - 学术论文、研究方法、benchmark 数字
-   - 纯粹的人事变动、融资额、招聘
-   - 已经发过几个月的旧产品 / 旧功能(见 A)
+【硬性筛选规则 — 必须严格遵守】
+A. **只保留 Anthropic / OpenAI 强相关内容**。包括:
+   - Claude / Claude Code / Anthropic API / Anthropic 旗下任何产品的新功能、新模型、新限额、新定价
+   - ChatGPT / GPT-x / Codex / OpenAI API / OpenAI 旗下任何产品的同上
+   - 高频使用者分享的、关于上面两家产品的实战技巧、prompt、工作流、demo
+   - Anthropic / OpenAI 公司层面的重要动态(安全计划、合作、定价策略)
+B. **直接丢弃**(完全不要出现):
+   - 其它公司的产品: Google / Meta / DeepSeek / Mistral / Perplexity / Cursor / LangChain / Vercel / Thinking Machines 等
+     即使在推文里被提到也别写(除非是和 Claude/GPT 互操作的实操技巧)
+   - 学术论文、benchmark、研究方法
+   - 招聘、融资、人事变动
+   - 老新闻: Sonnet 4.5 / Haiku 4.5 / MCP 协议发布 / Claude 桌面应用上线 / GPT-4 系列旧闻 等 2024-2025 老新闻
+   - 鸡汤、口号式发言、没具体信息的预告
+C. 判断不准时,优先丢弃。宁缺毋滥 — 输出短没关系,不要凑数。
 
-【输出结构】
-按下面的板块组织(没有内容的板块整段省略,不要写"暂无内容"):
+【输出结构】(板块若无内容,整段省略,不写"暂无")
 
-🅰️ Claude 产品更新详解 ← 重点章节,见下方"特别处理"
-⭐ Anthropic 公司动态(@AnthropicAI / @darioamodei / @alexalbert__ / @AmandaAskell 的非产品类内容)
-🚀 新发布 / 新产品(其它公司)
-🛠️ 新工具 / 新玩法
-💬 启发性观点(只挑真正有新意的,过滤鸡汤)
-📌 其他值得一看
+🅰️ Claude 产品更新详解
+🅾️ OpenAI 产品更新详解
+⭐ 公司动态(Anthropic / OpenAI 非产品类: 安全计划、合作伙伴、政策等)
+🧰 Claude / GPT 实战玩法(simonw / karpathy / alexalbert__ 等分享的、关于这两家产品的具体操作)
+📌 其他值得一看(必须仍是 Anthropic/OpenAI 相关)
 
-【🅰️ Claude 产品更新详解 — 特别处理】
-来源: @claudeai 账号下,且明显是过去 7 天内的产品更新/新功能。
-对每一条用下面三段式展开(必须三段都写,缺则用 "—"):
+【🅰️ Claude / 🅾️ OpenAI 产品更新详解 — 特别处理】
+对这两个章节里每一条,用下面三段式展开(三段都要,无信息则填 "—"):
 
 <b>{{功能名}}</b>
-• 功能介绍: 一句话说清这是什么、做了什么改动
-• 效果: 用户能拿它干什么、解决什么场景、和老版本/同类产品的差异
-• 使用限制: 哪些档位可用 (Free / Pro / Max / Team / Enterprise / API)、哪些平台 (Web / Mac / iOS / Android / Claude Code)、是否有用量限制、是否需要等候名单
-最后跟一行 <a href="原文URL">原文</a>
+• 功能介绍: 一句话说清是什么、做了什么改动
+• 效果: 用户拿它干什么、解决什么场景、和老版本/对家的差异
+• 使用限制: 档位 (Free / Pro / Max / Team / Enterprise / API)、平台 (Web / Mac / iOS / Android / Claude Code / ChatGPT App / Codex CLI)、用量上限、是否需要等候名单
+<a href="原文URL">原文</a>
 
-如果信息不全,基于上下文合理推测但标注 "(推测)"。
-如果 @claudeai 这一周没有可写的产品更新,这个章节整段省略。
-"Sonnet 4.5 / Haiku 4.5 / 桌面应用上线 / MCP 协议发布"等老闻,即使 @claudeai 在置顶展示也**严禁**写进这个章节。
+信息不全时基于上下文合理推测并标注 "(推测)"。
+若该公司这一周没有产品更新,对应章节整段省略。
 
-【格式要求】
-1. 全部中文,英文专有名词原样保留
-2. 普通条目: 1-2 行,产品/公司/模型名加粗 <b>...</b>,结尾附 <a href="原文URL">原文</a>
-   (URL 必须是有效非空的 https 链接,从"链接:"字段取)
-3. 同一话题多人转发只保留一条最权威的
-4. 仅用 Telegram HTML 标签: <b> <i> <a href="...">,不要 markdown,不要 ```
-5. 开头第一行: <b>📰 AI 应用速报 · {date}</b>
-6. 结尾另起一段: <i>今日关键词:xxx / xxx / xxx</i>(3-5 个)
-7. 总长度 ≤ 4500 字(给 Claude 章节多留些空间)
+【实战玩法章节要求】
+- 必须是「我做了 X,结果 Y」式的具体操作,不要泛泛而谈
+- 必须明确关联 Claude 或 GPT 中的至少一个
+- 必须是过去 7 天内的新分享
+
+【格式】
+1. 中文,英文专有名词原样保留
+2. 产品/模型/公司名加粗 <b>...</b>
+3. 每条结尾附 <a href="原文URL">原文</a>,URL 必须是从"链接:"字段取的有效 https
+4. 同一话题多人转只保留一条
+5. 仅用 Telegram HTML 标签: <b> <i> <a href="...">,不要 markdown,不要 ```
+6. 开头第一行: <b>📰 Anthropic & OpenAI 速报 · {date}</b>
+7. 结尾另起一段: <i>今日关键词:xxx / xxx / xxx</i>(3-5 个,仅限 Anthropic/OpenAI 相关概念)
+8. 总长度 ≤ 4500 字。内容不够就短,不要凑
 
 【推文原文】
 {tweets_block}
