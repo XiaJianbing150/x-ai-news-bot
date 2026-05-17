@@ -67,10 +67,10 @@ def main():
     print(report[:500])
     print("--------------")
 
-    # 3.5 抓 GitHub Trending top5,描述翻译成中文后拼到末尾(元数据精确不过 LLM,只翻译 desc)
-    print("\n抓取 GitHub Trending Top 5...")
+    # 3.5 抓 GitHub Trending 本周 top5,按 stars 增量降序,描述翻译成中文后拼到末尾
+    print("\n抓取 GitHub Trending 本周 Top 5...")
     try:
-        trending = fetch_github_trending(top_n=5, since="daily")
+        trending = fetch_github_trending(top_n=5, since="weekly")
         trending = translate_trending_descriptions(trending)
         trending_block = format_trending_block(trending)
         if trending_block:
