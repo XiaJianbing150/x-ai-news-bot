@@ -83,7 +83,7 @@ def _build_tweets_block(tweets):
             text = text[:500] + "..."
         # 标注来源,提示 LLM 区分权威 vs 时效不确定
         src = t.get("source", "")
-        if src in ("openai-blog", "anthropic-news"):
+        if src in ("openai-blog", "anthropic-news", "claude-code-releases"):
             tag = "[官博·权威·近7天]"
         elif src == "rss":
             tag = "[X·RSS·有日期]"
