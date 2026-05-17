@@ -410,7 +410,9 @@ def fetch_github_trending(top_n: int = 5, since: str = "daily"):
 
 
 def format_trending_block(repos):
-    """把 trending 列表渲染成 Telegram HTML,作为早报附录。"""
+    """把 trending 列表渲染成 Telegram HTML,作为早报附录。
+    优先用 desc_zh (中文翻译),没有则 fallback 原英文。
+    """
     if not repos:
         return ""
     lines = ["", "<b>🔥 GitHub Trending · 今日 Top 5</b>"]
@@ -421,8 +423,9 @@ def format_trending_block(repos):
         if r.get("stars_today"):
             meta_parts.append(f"⭐ +{r['stars_today']}/today")
         meta = "  ".join(meta_parts)
-        # 转义描述里的 HTML 特殊字符
-        desc = r["desc"].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        # 优先用中文翻译
+        desc = r.get("desc_zh") or r.get("desc", "")
+        desc = desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         lines.append(
             f'{i}. <a href="{r["url"]}"><b>{r["owner"]}/{r["name"]}</b></a>'
             + (f"  <i>{meta}</i>" if meta else "")
@@ -430,3 +433,59 @@ def format_trending_block(repos):
         if desc:
             lines.append(f"   {desc}")
     return "\n".join(lines)
+
+
+def translate_trending_descriptions(repos):
+    """用 DeepSeek 把 trending repo 的英文 desc 翻译成中文,写回 repo['desc_zh']。
+    失败时悄悄忽略,fallback 显示原英文。
+    """
+    if not repos:
+        return repos
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
+    if not api_key:
+        return repos
+
+    # 用编号绑定避免错位
+    listing = "\n".join(
+        f"{i+1}. {r.get('desc','').strip()}" for i, r in enumerate(repos) if r.get("desc")
+    )
+    if not listing:
+        return repos
+
+    from .config import DEEPSEEK_API_URL  # 避免循环引用,这里延迟导入
+    prompt = (
+        f"下面是 {len(repos)} 个 GitHub 项目的英文简介。请翻译成简洁的中文,"
+        f"每条不超过 60 字,保留模型名/产品名/技术名等专有英文词。"
+        f"严格按原编号输出,每行格式: \"N. 中文翻译\",不要加任何其它说明。\n\n"
+        + listing
+    )
+    body = {
+        "model": "deepseek-v4-flash",  # 翻译用轻量模型,省钱省时
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2,
+        "max_tokens": 1024,
+        "stream": False,
+    }
+    try:
+        r = requests.post(
+            DEEPSEEK_API_URL,
+            json=body,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            timeout=60,
+        )
+        if not r.ok:
+            print(f"  trending 翻译 HTTP {r.status_code}: {r.text[:200]}")
+            return repos
+        content = r.json()["choices"][0]["message"]["content"].strip()
+        for line in content.split("\n"):
+            m = re.match(r"^\s*(\d+)[.．。]?\s*(.+)$", line.strip())
+            if not m:
+                continue
+            idx = int(m.group(1)) - 1
+            if 0 <= idx < len(repos):
+                repos[idx]["desc_zh"] = m.group(2).strip()
+        translated = sum(1 for r in repos if r.get("desc_zh"))
+        print(f"  trending 翻译 -> {translated}/{len(repos)} 条")
+    except Exception as e:
+        print(f"  trending 翻译失败(忽略): {e!r}")
+    return repos
