@@ -7,6 +7,7 @@ from src.fetcher import (
     fetch_arxiv_papers,
     fetch_github_trending,
     format_trending_block,
+    translate_trending_descriptions,
     fetch_openai_blog,
     fetch_anthropic_news,
 )
@@ -66,10 +67,11 @@ def main():
     print(report[:500])
     print("--------------")
 
-    # 3.5 抓 GitHub Trending top5,直接拼到末尾(不过 LLM,精确不走样)
+    # 3.5 抓 GitHub Trending top5,描述翻译成中文后拼到末尾(元数据精确不过 LLM,只翻译 desc)
     print("\n抓取 GitHub Trending Top 5...")
     try:
         trending = fetch_github_trending(top_n=5, since="daily")
+        trending = translate_trending_descriptions(trending)
         trending_block = format_trending_block(trending)
         if trending_block:
             report = report + "\n\n" + trending_block
