@@ -13,6 +13,7 @@ from src.fetcher import (
 )
 from src.summarizer import generate_morning_report
 from src.telegram import send_to_telegram
+from src.archive import save_archive_and_cleanup
 
 
 def _bj_now_str():
@@ -86,6 +87,14 @@ def main():
     except Exception as e:
         traceback.print_exc()
         sys.exit(1)
+
+    # 5. 存档到 archive/,只保留最近 7 天
+    print("\n保存归档...")
+    try:
+        save_archive_and_cleanup(report)
+    except Exception as e:
+        print(f"归档失败(忽略): {e!r}")
+
     print("\n✅ 完成")
 
 
