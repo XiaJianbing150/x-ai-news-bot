@@ -324,6 +324,56 @@ def fetch_anthropic_news(hours_lookback: int = None):
     return out
 
 
+def fetch_claude_code_releases(hours_lookback: int = None):
+    """从 GitHub releases atom feed 抓 Claude Code 版本说明 (权威源)。
+    覆盖 Anthropic 官博不会发的产品小功能更新 (如 Agent View / /goal 等)。
+    +48h 缓冲避免边界日。
+    """
+    if hours_lookback is None:
+        hours_lookback = HOURS_LOOKBACK + 48
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours_lookback)
+    try:
+        r = _http_get("https://github.com/anthropics/claude-code/releases.atom")
+    except Exception as e:
+        print(f"  Claude Code releases 抓取失败: {e!r}")
+        return []
+    if r.status_code != 200:
+        print(f"  Claude Code releases HTTP {r.status_code}")
+        return []
+    entries = re.findall(r"<entry>(.*?)</entry>", r.text, re.DOTALL)
+    out = []
+    for e in entries:
+        tm = re.search(r"<title>([^<]+)</title>", e)
+        um = re.search(r"<updated>([^<]+)</updated>", e)
+        lm = re.search(r'<link[^>]*href="([^"]+)"', e)
+        cm = re.search(r"<content[^>]*>(.*?)</content>", e, re.DOTALL)
+        if not (tm and um and lm and cm):
+            continue
+        try:
+            pub_dt = datetime.fromisoformat(um.group(1).replace("Z", "+00:00")).astimezone(timezone.utc)
+        except Exception:
+            continue
+        if pub_dt < cutoff:
+            continue
+        version = tm.group(1).strip()
+        link = lm.group(1)
+        # content 是 HTML-entity-escaped HTML,先 unescape 再 strip tags
+        import html as _html
+        body = _html.unescape(cm.group(1))
+        body = _strip_html(body)
+        # 截一段,完整 changelog 可能上千字
+        body = body[:1500]
+        out.append({
+            "user": "ClaudeCode官方",
+            "text": f"Claude Code {version} 发布\n{body}",
+            "link": link,
+            "published": pub_dt.isoformat(),
+            "source": "claude-code-releases",
+        })
+    print(f"  Claude Code releases -> {len(out)} versions")
+    return out
+
+
 def fetch_arxiv_papers():
     cutoff = datetime.now(timezone.utc) - timedelta(hours=HOURS_LOOKBACK + 24)
     seen_ids = set()
