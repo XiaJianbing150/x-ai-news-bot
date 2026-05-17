@@ -13,7 +13,7 @@ SYSTEM_PROMPT = (
 USER_TEMPLATE = """今天是 {date}。下面是过去 {window} 内容,共 {n} 条。
 
 【来源 & 时效】每条前会有 tag 标注:
-- [官博·权威·近7天]: 来自 Anthropic / OpenAI 官方博客,**确保是近 7 天发布,内容准确,优先采用**
+- [官博·权威·近7天]: 来自 Anthropic / OpenAI 官方博客,或 Claude Code 官方版本说明,**确保是近 7 天发布,内容准确,优先采用**。Claude Code 版本说明里会有 agent view / /goal / /scroll-speed 这类小功能,务必全部写进 🅰️ Claude 详解
 - [X·RSS·有日期]: 来自 X 推文,RSS 通道,**已按 7 天窗口过滤,内容时效可信**
 - [X·Jina·时效未知,可能是数月前的pinned推文]: 来自 X 但 Jina 抓取,**没有时间戳。X.com 对未登录访问只返回 pinned/featured,实测内容多为 2025-09/10 的老闻。**对这类内容请极度警惕,只有当内容明显是新的(新功能/未发布过的产品/有时间用语如"今天""this week")才能用,任何看起来像已发布的产品(Sonnet 4.5、Haiku 4.5、Opus 4.x、Claude 桌面应用、MCP 协议等)一律丢弃
 
@@ -43,7 +43,7 @@ C. 判断不准时,优先丢弃。宁缺毋滥 — 输出短没关系,不要凑�
 📌 其他值得一看(必须仍是 Anthropic/OpenAI 相关)
 
 【🅰️ Claude / 🅾️ OpenAI 产品更新详解 — 特别处理】
-**优先收录**所有 user="Anthropic官博" 和 "OpenAI官博" 的条目(这两家近一周的所有产品/公告),X 推文作为补充。
+**优先收录**所有 user="Anthropic官博" / "OpenAI官博" / "ClaudeCode官方" 的条目(这三个权威源近一周的所有产品/公告/版本说明),X 推文作为补充。
 对这两个章节里每一条,用下面三段式展开(三段都要,无信息则填 "—"):
 
 <b>{{功能名}}</b>
@@ -83,7 +83,7 @@ def _build_tweets_block(tweets):
             text = text[:500] + "..."
         # 标注来源,提示 LLM 区分权威 vs 时效不确定
         src = t.get("source", "")
-        if src in ("openai-blog", "anthropic-news"):
+        if src in ("openai-blog", "anthropic-news", "claude-code-releases"):
             tag = "[官博·权威·近7天]"
         elif src == "rss":
             tag = "[X·RSS·有日期]"
