@@ -10,6 +10,7 @@ from src.fetcher import (
     translate_trending_descriptions,
     fetch_openai_blog,
     fetch_anthropic_news,
+    fetch_claude_code_releases,
 )
 from src.summarizer import generate_morning_report
 from src.telegram import send_to_telegram
@@ -41,6 +42,12 @@ def main():
         items.extend(fetch_anthropic_news())
     except Exception as e:
         print(f"  Anthropic news 失败(忽略): {e!r}")
+
+    print("  --- Claude Code 版本说明 ---")
+    try:
+        items.extend(fetch_claude_code_releases())
+    except Exception as e:
+        print(f"  Claude Code releases 失败(忽略): {e!r}")
 
     print("  --- OpenAI 官博 ---")
     try:
