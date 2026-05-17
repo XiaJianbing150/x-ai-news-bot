@@ -363,8 +363,8 @@ _GH_REPO_HEAD = re.compile(
 )
 
 
-def fetch_github_trending(top_n: int = 5, since: str = "daily"):
-    """抓 github.com/trending top N,通过 Jina Reader。
+def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
+    """抓 github.com/trending top N,通过 Jina Reader,按 stars 增量降序排序。
     since: daily | weekly | monthly
     """
     url = f"https://r.jina.ai/https://github.com/trending?since={since}"
@@ -389,10 +389,15 @@ def fetch_github_trending(top_n: int = 5, since: str = "daily"):
         if repo_url.count("/") != 4:
             continue
         chunk = text[m.end():m.end() + 1500]
-        stars_today = ""
-        sm = re.search(r"(\d[\d,]*)\s*stars?\s*today", chunk)
+        stars_inc, stars_num = "", 0
+        # 同时匹配 "today" / "this week" / "this month"
+        sm = re.search(r"(\d[\d,]*)\s*stars?\s*(today|this\s+week|this\s+month)", chunk, re.IGNORECASE)
         if sm:
-            stars_today = sm.group(1)
+            stars_inc = sm.group(1)
+            try:
+                stars_num = int(stars_inc.replace(",", ""))
+            except ValueError:
+                stars_num = 0
         lang_m = re.search(r"\n([A-Z][\w+#-]*)\[", chunk)
         lang = lang_m.group(1) if lang_m else ""
         repos.append({
@@ -401,12 +406,19 @@ def fetch_github_trending(top_n: int = 5, since: str = "daily"):
             "url": repo_url,
             "desc": desc[:200],
             "lang": lang,
-            "stars_today": stars_today,
+            "stars_inc": stars_inc,    # 显示用,带千分位
+            "stars_num": stars_num,    # 排序用
+            "since": since,
         })
-        if len(repos) >= top_n:
-            break
-    print(f"  GitHub trending -> {len(repos)} repos")
+    # 按 stars 增量降序
+    repos.sort(key=lambda x: x["stars_num"], reverse=True)
+    repos = repos[:top_n]
+    print(f"  GitHub trending ({since}) -> {len(repos)} repos (sorted by stars desc)")
     return repos
+
+
+_SINCE_LABEL_ZH = {"daily": "今日", "weekly": "本周", "monthly": "本月"}
+_SINCE_LABEL_PERIOD = {"daily": "today", "weekly": "this week", "monthly": "this month"}
 
 
 def format_trending_block(repos):
@@ -415,13 +427,18 @@ def format_trending_block(repos):
     """
     if not repos:
         return ""
-    lines = ["", "<b>🔥 GitHub Trending · 今日 Top 5</b>"]
+    since = repos[0].get("since", "weekly")
+    title_period = _SINCE_LABEL_ZH.get(since, "本周")
+    star_period = _SINCE_LABEL_PERIOD.get(since, "this week")
+    lines = ["", f"<b>🔥 GitHub Trending · {title_period} Top {len(repos)}</b>"]
     for i, r in enumerate(repos, 1):
         meta_parts = []
         if r.get("lang"):
             meta_parts.append(r["lang"])
-        if r.get("stars_today"):
-            meta_parts.append(f"⭐ +{r['stars_today']}/today")
+        # 兼容老字段名 stars_today
+        stars_inc = r.get("stars_inc") or r.get("stars_today", "")
+        if stars_inc:
+            meta_parts.append(f"⭐ +{stars_inc}/{star_period}")
         meta = "  ".join(meta_parts)
         # 优先用中文翻译
         desc = r.get("desc_zh") or r.get("desc", "")
