@@ -12,7 +12,7 @@ on:
         default: '168'
 
 permissions:
-  contents: read
+  contents: write   # 允许 commit & push archive/ 回 main
 
 jobs:
   send-morning-report:
@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 取完整历史,push 不会因 shallow 拒绝
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,3 +41,17 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           HOURS_LOOKBACK: ${{ inputs.hours_lookback || '168' }}
         run: python main.py
+
+      - name: Commit archive
+        if: always()  # 即便 bot 主流程失败,只要写过文件就尝试存
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add archive/ 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "no archive changes to commit"
+          else
+            git commit -m "chore(archive): $(TZ=Asia/Shanghai date +%Y-%m-%d) AI 早报"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
