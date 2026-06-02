@@ -105,6 +105,7 @@ curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 ```
 news - 立即触发跑一次今日早报
 search - 在最近 7 天早报存档里检索
+query - 对早报里某条内容做细节展开
 clear - 清空对话上下文
 help - 显示帮助
 ```

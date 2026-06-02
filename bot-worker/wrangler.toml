@@ -17,5 +17,9 @@ GITHUB_WORKFLOW = "daily.yml"
 ALLOWED_CHAT_ID = "8266549605"
 # DeepSeek 模型(对话用快模型,省钱)
 DEEPSEEK_MODEL = "deepseek-v4-flash"
+# /query 用强模型,做深度展开
+QUERY_MODEL = "deepseek-v4-pro"
+# /query 时拉最近多少天的早报存档当上下文
+QUERY_ARCHIVE_DAYS = "3"
 # 保留多少轮对话历史
 HISTORY_TURNS = "10"
