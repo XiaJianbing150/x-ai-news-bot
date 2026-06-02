@@ -1,0 +1,21 @@
+name = "ai-news-bot"
+main = "src/index.js"
+compatibility_date = "2025-05-01"
+
+# 部署前先跑: wrangler kv namespace create CHAT_HISTORY
+# 把返回的 id 粘到下面,然后 wrangler deploy
+[[kv_namespaces]]
+binding = "CHAT_HISTORY"
+id = "REPLACE_WITH_KV_ID"
+
+[vars]
+# 仓库地址,用于触发 workflow_dispatch + 拉 archive
+GITHUB_REPO = "xiajianbing150/x-ai-news-bot"
+# workflow 文件名,跑 /news 时触发它
+GITHUB_WORKFLOW = "daily.yml"
+# 早报推送的目标 chat_id;同时也作为唯一被授权对话的人
+ALLOWED_CHAT_ID = "8266549605"
+# DeepSeek 模型(对话用快模型,省钱)
+DEEPSEEK_MODEL = "deepseek-v4-flash"
+# 保留多少轮对话历史
+HISTORY_TURNS = "10"
