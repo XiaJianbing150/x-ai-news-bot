@@ -84,7 +84,17 @@ export default {
     }
 
     // 异步处理,先返回 200,避免 Telegram 重试
-    ctx.waitUntil(handleUpdate(update, env).catch((e) => console.error(e)));
+    ctx.waitUntil(
+      handleUpdate(update, env).catch(async (e) => {
+        console.error("handleUpdate failed", e);
+        try {
+          const chatId = update?.message?.chat?.id || update?.edited_message?.chat?.id;
+          if (chatId) {
+            await tgSend(env, String(chatId), `⚠️ 出错了: <code>${escapeHtml(String(e).slice(0, 300))}</code>`);
+          }
+        } catch {}
+      })
+    );
     return new Response("ok", { status: 200 });
   },
 };
@@ -218,7 +228,7 @@ async function cmdQuery(env, chatId, topic) {
   await tgSend(
     env,
     chatId,
-    `🧠 正在基于最近早报展开: <i>${escapeHtml(topic)}</i>\n通常 10-30 秒,请稍候。`
+    `🧠 正在基于最近早报展开: <i>${escapeHtml(topic)}</i>\n通常 8-20 秒,请稍候。`
   );
   const [owner, repo] = env.GITHUB_REPO.split("/");
 
@@ -245,7 +255,7 @@ async function cmdQuery(env, chatId, topic) {
         const r = await fetch(f.download_url);
         if (r.ok) docs.push(`## 早报 ${f.name}\n${await r.text()}`);
       }
-      archiveText = docs.join("\n\n---\n\n").slice(0, 40000);
+      archiveText = docs.join("\n\n---\n\n").slice(0, 15000);
     }
   } catch (e) {
     console.error("query archive fetch failed", e);
@@ -258,12 +268,12 @@ async function cmdQuery(env, chatId, topic) {
     try {
       const rr = await fetch(
         `https://r.jina.ai/https://github.com/${m[1]}/${m[2]}`,
-        { headers: { Accept: "text/markdown" } }
+        { headers: { Accept: "text/markdown" }, signal: AbortSignal.timeout(10000) }
       );
       if (rr.ok) {
         const t = await rr.text();
         const i = t.indexOf("Markdown Content:");
-        repoText = (i > 0 ? t.slice(i) : t).slice(0, 10000);
+        repoText = (i > 0 ? t.slice(i) : t).slice(0, 6000);
       }
     } catch {}
   }
@@ -281,9 +291,10 @@ async function cmdQuery(env, chatId, topic) {
       { role: "user", content: parts.join("\n\n") },
     ],
     {
-      model: env.QUERY_MODEL || "deepseek-v4-pro",
+      model: env.QUERY_MODEL || "deepseek-v4-flash",
       temperature: 0.3,
-      max_tokens: 4096,
+      max_tokens: 3000,
+      timeout_ms: 25000,
     }
   );
   return tgSend(env, chatId, answer);
@@ -329,6 +340,8 @@ async function deepseekChat(env, messages, opts = {}) {
       max_tokens: opts.max_tokens ?? 2048,
       stream: false,
     }),
+    // Cloudflare Workers 免费版总墙钟 30s,留点 buffer
+    signal: AbortSignal.timeout(opts.timeout_ms ?? 25000),
   });
   if (!r.ok) {
     const t = await r.text();

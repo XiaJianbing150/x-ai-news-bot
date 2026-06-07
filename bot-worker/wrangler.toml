@@ -17,9 +17,10 @@ GITHUB_WORKFLOW = "daily.yml"
 ALLOWED_CHAT_ID = "8266549605"
 # DeepSeek 模型(对话用快模型,省钱)
 DEEPSEEK_MODEL = "deepseek-v4-flash"
-# /query 用强模型,做深度展开
-QUERY_MODEL = "deepseek-v4-pro"
+# /query 用的模型(v4-flash 快、便宜、能跑在 Workers 免费版 30s 限内;
+# 要更深度可手动换成 deepseek-v4-pro,但需要 Cloudflare Workers Paid 才稳)
+QUERY_MODEL = "deepseek-v4-flash"
 # /query 时拉最近多少天的早报存档当上下文
-QUERY_ARCHIVE_DAYS = "3"
+QUERY_ARCHIVE_DAYS = "1"
 # 保留多少轮对话历史
 HISTORY_TURNS = "10"
