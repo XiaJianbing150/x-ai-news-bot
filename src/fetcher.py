@@ -412,16 +412,19 @@ _GH_REPO_HEAD = re.compile(
     re.MULTILINE,
 )
 
+# HTML 直抓的 user-agent;github 不会因为没有 Mozilla 拒绝,但加上更稳
+_GH_DIRECT_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/120.0"
+
 
 def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
-    """抓 github.com/trending top N,通过 Jina Reader,按 stars 增量降序排序。
+    """抓 github.com/trending top N,直接 HTTPS 拉 HTML 解析。
+    历史上走过 r.jina.ai,但 jina 对 github.com 长期返回 HTTP 451(Unavailable
+    For Legal Reasons),所以现在直接连 github,自己解析 HTML。
     since: daily | weekly | monthly
     """
-    url = f"https://r.jina.ai/https://github.com/trending?since={since}"
-    headers = {"Accept": "text/markdown"}
-    api_key = os.environ.get("JINA_API_KEY")
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    import html as _html
+    url = f"https://github.com/trending?since={since}"
+    headers = {"User-Agent": _GH_DIRECT_UA, "Accept": "text/html,application/xhtml+xml"}
     try:
         r = _http_get(url, headers=headers)
     except Exception as e:
@@ -432,38 +435,48 @@ def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
         return []
 
     text = r.text
+    # trending 页面每个 repo 是一个 <article class="Box-row">
+    blocks = re.split(r'<article\s+class="Box-row"', text)
     repos = []
-    for m in _GH_REPO_HEAD.finditer(text):
-        owner, name, repo_url, desc = m.group(1), m.group(2), m.group(3), m.group(4).strip()
-        # 跳过明显的导航假命中(GitHub trending 真正的 repo URL 一定是 /owner/repo)
-        if repo_url.count("/") != 4:
+    for blk in blocks[1:]:
+        m = re.search(r'<h2[^>]*class="[^"]*h3[^"]*"[^>]*>\s*<a[^>]+href="/([\w\-_.]+)/([\w\-_.]+)"', blk)
+        if not m:
             continue
-        chunk = text[m.end():m.end() + 1500]
-        stars_inc, stars_num = "", 0
-        # 同时匹配 "today" / "this week" / "this month"
-        sm = re.search(r"(\d[\d,]*)\s*stars?\s*(today|this\s+week|this\s+month)", chunk, re.IGNORECASE)
-        if sm:
-            stars_inc = sm.group(1)
+        owner, name = m.group(1), m.group(2)
+
+        # 描述在 <p class="col-9 ...">
+        m = re.search(r'<p[^>]+col-9[^"]*"[^>]*>([^<]+?)</p>', blk, re.DOTALL)
+        desc = _html.unescape(m.group(1).strip()) if m else ""
+
+        # 主语言
+        m = re.search(r'<span itemprop="programmingLanguage">\s*([^<]+?)\s*</span>', blk)
+        lang = m.group(1).strip() if m else ""
+
+        # 本周/今日/本月新增 stars
+        m = re.search(r'([\d,]+)\s*stars?\s+(today|this\s+week|this\s+month)', blk, re.IGNORECASE)
+        if m:
+            stars_inc = m.group(1)
             try:
                 stars_num = int(stars_inc.replace(",", ""))
             except ValueError:
                 stars_num = 0
-        lang_m = re.search(r"\n([A-Z][\w+#-]*)\[", chunk)
-        lang = lang_m.group(1) if lang_m else ""
+        else:
+            stars_inc, stars_num = "", 0
+
         repos.append({
             "owner": owner,
             "name": name,
-            "url": repo_url,
+            "url": f"https://github.com/{owner}/{name}",
             "desc": desc[:200],
             "lang": lang,
-            "stars_inc": stars_inc,    # 显示用,带千分位
-            "stars_num": stars_num,    # 排序用
+            "stars_inc": stars_inc,
+            "stars_num": stars_num,
             "since": since,
         })
-    # 按 stars 增量降序
+
     repos.sort(key=lambda x: x["stars_num"], reverse=True)
     repos = repos[:top_n]
-    print(f"  GitHub trending ({since}) -> {len(repos)} repos (sorted by stars desc)")
+    print(f"  GitHub trending ({since}) -> {len(repos)} repos (direct fetch)")
     return repos
 
 
