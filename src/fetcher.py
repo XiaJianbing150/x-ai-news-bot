@@ -478,6 +478,7 @@ def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
     repos = repos[:top_n]
     print(f"  GitHub trending ({since}) -> {len(repos)} repos (direct fetch)")
     return repos
+    return repos
 
 
 _SINCE_LABEL_ZH = {"daily": "今日", "weekly": "本周", "monthly": "本月"}
