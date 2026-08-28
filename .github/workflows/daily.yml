@@ -2,8 +2,8 @@ name: AI News Bot - Daily
 
 on:
   schedule:
-    # 北京时间 08:00 = UTC 00:00
-    - cron: '0 0 * * *'
+    # 北京时间 07:00 = UTC 前一天 23:00
+    - cron: '0 23 * * *'
   workflow_dispatch:
     inputs:
       hours_lookback:
