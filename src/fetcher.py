@@ -550,6 +550,8 @@ def translate_trending_descriptions(repos):
             "temperature": 0.2,
             "max_tokens": 1024,
             "stream": False,
+            # v4 系列 flash 默认可能带 thinking,推理独白会污染翻译结果,显式关闭
+            "thinking": {"type": "disabled"},
         }
         try:
             r = requests.post(
@@ -558,6 +560,15 @@ def translate_trending_descriptions(repos):
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 timeout=60,
             )
+            if r.status_code == 400 and "thinking" in r.text:
+                # API 不认识 thinking 参数时去掉重试一次
+                body.pop("thinking")
+                r = requests.post(
+                    DEEPSEEK_API_URL,
+                    json=body,
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    timeout=60,
+                )
             if not r.ok:
                 print(f"  trending 翻译 model={model} HTTP {r.status_code}: {r.text[:200]}")
                 continue
@@ -574,13 +585,21 @@ def translate_trending_descriptions(repos):
     if not content:
         print("  trending 翻译全部失败,fallback 显示原英文")
         return repos
+    # 推理独白污染特征: 模型自我怀疑/元话语/超长
+    _POLLUTION = ("wait", "actually", "hmm", "translate", "chinese", "english",
+                  "user", "需要", "应该是", "我想", "让我们")
     for line in content.split("\n"):
         m = re.match(r"^\s*(\d+)[.．。]?\s*(.+)$", line.strip())
         if not m:
             continue
         idx = int(m.group(1)) - 1
-        if 0 <= idx < len(repos):
-            repos[idx]["desc_zh"] = m.group(2).strip()
+        text = m.group(2).strip().strip('"\'“”')
+        if 0 <= idx < len(repos) and text:
+            low = text.lower()
+            if any(p in low for p in _POLLUTION) or len(text) > 90:
+                print(f"  丢弃可疑翻译 #{idx+1}: {text[:40]}...")
+                continue
+            repos[idx]["desc_zh"] = text
     translated = sum(1 for r in repos if r.get("desc_zh"))
     print(f"  trending 翻译 -> {translated}/{len(repos)} 条")
     return repos

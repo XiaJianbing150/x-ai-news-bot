@@ -61,7 +61,9 @@ MAX_TWEETS_PER_BLOGGER = int(os.environ.get("MAX_TWEETS_PER_BLOGGER", "5"))
 
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
-# 是否启用深度思考(仅 v4-pro / reasoner 类模型支持,显著提升推理质量但更慢更贵)
-DEEPSEEK_THINKING = os.environ.get("DEEPSEEK_THINKING", "1") not in ("0", "false", "False", "")
+# 深度思考开关。2026-08-29 实测 v4-pro/v4-flash 开 thinking 会把推理独白
+# 混进 content (开头/中段随机出现,无法可靠切割),甚至整单返回空。
+# 提示词本身足够强,默认关闭;需要时设 DEEPSEEK_THINKING=1 重新开启。
+DEEPSEEK_THINKING = os.environ.get("DEEPSEEK_THINKING", "0") in ("1", "true", "True")
 
 REQUEST_TIMEOUT = 25
