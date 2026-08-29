@@ -174,8 +174,19 @@ _PROMPT = """下面是 GitHub {period} Trending 的 {n} 个项目,每个附上�
 要求:
 - 每条 30~60 字,说人话,不堆砌术语
 - 字段名必须严格用「功能」「开发者价值」「稳定性」,前面不要加 emoji 或 **
-- 严格按下面格式输出,每个项目一段,编号对齐,不要输出任何其它内容
+- 严格按下面的格式输出,每个项目一段,编号对齐,不要输出任何其它内容
 - 不确定的信息(比如 issue 标题无法判断是否严重)就写"未见明显大坑",不要编造
+
+输出格式示例(必须完全照抄这个格式):
+1. **freestylefly/awesome-gpt-image-2**
+- 功能: xxx
+- 开发者价值: xxx
+- 稳定性: xxx
+
+2. **tt-a1i/archify**
+- 功能: xxx
+- 开发者价值: xxx
+- 稳定性: xxx
 
 {context}
 """
@@ -193,8 +204,11 @@ def _parse_enrich(content: str, repos: list) -> int:
         line = raw.strip().replace("\ufe0f", "")  # 去掉变体选择符 (⚖️ = U+2696+U+FE0F)
         if not line:
             continue
-        # 编号行: 1. **owner/name** / **1. owner/name** / 1. owner/name: / 1️⃣ owner/name
-        m = re.match(r"^(?:\*\*)?(\d+)[.．、\)]?\s*(?:\*\*)?([\w\-_.]+/[\w\-_.]+)", line)
+        # 编号行: 1. **owner/name** / **1. owner/name** / [1] owner/name / 1️⃣ owner/name
+        m = re.match(
+            r"^(?:\*\*)?[\[【]?(\d+)[\]】]?[.．、\)]?\s*(?:\*\*)?([\w\-_.]+/[\w\-_.]+)",
+            line,
+        )
         if m:
             idx = int(m.group(1)) - 1
             if 0 <= idx < len(repos):
