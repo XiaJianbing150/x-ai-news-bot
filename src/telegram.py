@@ -71,6 +71,26 @@ def _strip_all_tags(text: str) -> str:
     return html.unescape(text)
 
 
+def _md_to_tg(text: str) -> str:
+    """清理后的 markdown -> Telegram HTML (加粗/斜体/行内代码/链接/列表标签)。"""
+    text = re.sub(
+        r"\[([^\]]+)\]\((https?://[^)\s]+)\)",
+        r'<a href="\2">\1</a>',
+        text,
+    )
+    text = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"\*([^*]+)\*", r"<i>\1</i>", text)
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    # 「功能介绍:」这类标签加粗;• 前缀更紧凑
+    text = re.sub(
+        r"^[-•]\s+([^：:]{1,16}[：:])",
+        r"• <b>\1</b>",
+        text,
+        flags=re.MULTILINE,
+    )
+    return text
+
+
 def _post(url, payload):
     return requests.post(url, data=payload, timeout=30)
 
@@ -80,7 +100,7 @@ def send_to_telegram(text: str):
     chat_id = os.environ["TELEGRAM_CHAT_ID"]
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-    cleaned = _sanitize_html(text)
+    cleaned = _sanitize_html(_md_to_tg(text))
     parts = _chunks(cleaned)
 
     for i, part in enumerate(parts):

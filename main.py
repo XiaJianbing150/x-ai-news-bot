@@ -13,6 +13,7 @@ from src.fetcher import (
     fetch_claude_code_releases,
 )
 from src.summarizer import generate_morning_report
+from src.text_utils import normalize_text
 from src.notify import send_report, send_alert
 from src.archive import save_archive_and_cleanup
 
@@ -88,6 +89,11 @@ def main():
             print(f"  附加 {len(trending)} 个 trending 仓库,总长度 {len(report)} 字符")
     except Exception as e:
         print(f"GitHub Trending 抓取失败(忽略): {e!r}")
+
+    # 3.75 统一清理: DeepSeek 时而输出 HTML 时而 markdown,残留 ** / 混合符号,
+    # 这里归一成干净 markdown,邮件 HTML 渲染 / Telegram / 归档三处共用
+    report = normalize_text(report)
+    print(f"清理后报告长度: {len(report)} 字符")
 
     # 4. 推送 (QQ 邮箱为主,Telegram 若配置了也发)
     print("\n[3/3] 推送报告...")
