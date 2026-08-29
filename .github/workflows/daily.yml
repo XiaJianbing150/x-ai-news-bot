@@ -44,6 +44,8 @@ jobs:
           # Telegram (可选)
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # GitHub API token: 提高 trending 详情抓取的限速 (5000 次/时)
+          GITHUB_TOKEN: ${{ github.token }}
           HOURS_LOOKBACK: ${{ inputs.hours_lookback || '168' }}
         run: python main.py
 

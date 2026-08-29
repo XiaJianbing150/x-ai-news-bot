@@ -486,7 +486,7 @@ _SINCE_LABEL_PERIOD = {"daily": "today", "weekly": "this week", "monthly": "this
 
 def format_trending_block(repos):
     """把 trending 列表渲染成 Telegram HTML,作为早报附录。
-    优先用 desc_zh (中文翻译),没有则 fallback 原英文。
+    优先用 enrich (功能/开发者价值/稳定性 三点解读),其次 desc_zh 翻译,最后原英文。
     """
     if not repos:
         return ""
@@ -494,6 +494,10 @@ def format_trending_block(repos):
     title_period = _SINCE_LABEL_ZH.get(since, "本周")
     star_period = _SINCE_LABEL_PERIOD.get(since, "this week")
     lines = ["", f"<b>🔥 GitHub Trending · {title_period} Top {len(repos)}</b>"]
+
+    def esc(s: str) -> str:
+        return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
     for i, r in enumerate(repos, 1):
         meta_parts = []
         if r.get("lang"):
@@ -503,15 +507,21 @@ def format_trending_block(repos):
         if stars_inc:
             meta_parts.append(f"⭐ +{stars_inc}/{star_period}")
         meta = "  ".join(meta_parts)
-        # 优先用中文翻译
-        desc = r.get("desc_zh") or r.get("desc", "")
-        desc = desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         lines.append(
             f'{i}. <a href="{r["url"]}"><b>{r["owner"]}/{r["name"]}</b></a>'
             + (f"  <i>{meta}</i>" if meta else "")
         )
-        if desc:
-            lines.append(f"   {desc}")
+        en = r.get("enrich") or {}
+        if en.get("func"):
+            lines.append(f"   🔍 功能: {esc(en['func'])}")
+            if en.get("dev"):
+                lines.append(f"   🎯 开发者价值: {esc(en['dev'])}")
+            if en.get("stable"):
+                lines.append(f"   ⚖️ 稳定性: {esc(en['stable'])}")
+        else:
+            desc = r.get("desc_zh") or r.get("desc", "")
+            if desc:
+                lines.append(f"   {esc(desc)}")
     return "\n".join(lines)
 
 

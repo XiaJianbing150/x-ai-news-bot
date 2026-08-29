@@ -12,6 +12,7 @@ from src.fetcher import (
     fetch_anthropic_news,
     fetch_claude_code_releases,
 )
+from src.trending import enrich_trending
 from src.summarizer import generate_morning_report
 from src.text_utils import normalize_text
 from src.notify import send_report, send_alert
@@ -82,7 +83,8 @@ def main():
     print("\n抓取 GitHub Trending 本周 Top 5...")
     try:
         trending = fetch_github_trending(top_n=5, since="weekly")
-        trending = translate_trending_descriptions(trending)
+        trending = translate_trending_descriptions(trending)  # 兜底: 中文简介
+        trending = enrich_trending(trending)                  # 详情: 功能/开发者价值/稳定性
         trending_block = format_trending_block(trending)
         if trending_block:
             report = report + "\n\n" + trending_block
