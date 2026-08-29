@@ -561,10 +561,13 @@ def translate_trending_descriptions(repos):
             if not r.ok:
                 print(f"  trending 翻译 model={model} HTTP {r.status_code}: {r.text[:200]}")
                 continue
-            content = (r.json()["choices"][0]["message"]["content"] or "").strip()
+            msg = (r.json().get("choices") or [{}])[0].get("message", {})
+            # v4 模型偶发 content 为空、正文在 reasoning_content
+            content = (msg.get("content") or msg.get("reasoning_content") or "").strip()
             if content:
                 print(f"  trending 翻译使用 model={model}")
                 break
+            print(f"  trending 翻译 model={model} 返回空 content,尝试下一个模型")
         except Exception as e:
             print(f"  trending 翻译 model={model} 异常(尝试下一个): {e!r}")
             continue
