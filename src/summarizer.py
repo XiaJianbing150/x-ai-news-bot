@@ -167,4 +167,13 @@ def generate_morning_report(tweets):
     if not report:
         raise RuntimeError("DeepSeek 连续两次返回空内容 (含 reasoning_content 也为空)")
 
+    # thinking 模式偶发把推理过程混进 content: 正文必定以 📰 标题行开头,
+    # 找到第一个标题行,把之前的"思考独白"全部剥掉
+    for marker in ("<b>📰", "📰 Anthropic"):
+        idx = report.find(marker)
+        if idx > 0:
+            print(f"  剥离正文前的推理过程 {idx} 字符")
+            report = report[idx:]
+            break
+
     return report
