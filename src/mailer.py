@@ -66,11 +66,14 @@ def _inline(s: str) -> str:
         r'<a href="\2" style="{a}">\1</a>'.format(a=_CSS["a"]),
         s,
     )
-    s = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", s)
-    s = re.sub(r"\*([^*]+)\*", r"<i>\1</i>", s)
+    # 非贪婪: 加粗内容里可能含单个 * (如 **Bash(git * main)**)
+    s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+    s = re.sub(r"\*(.+?)\*", r"<i>\1</i>", s)
     s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
     # 列表行里的「功能介绍:」这类标签加粗,读起来更清晰
-    s = re.sub(r"^([^：:]{1,16}[：:])", r"<b>\1</b>", s)
+    # (跳过以链接/HTML 开头的行,避免把 href 里的冒号误当标签)
+    if not (s.startswith("[") or s.startswith("<")):
+        s = re.sub(r"^([^：:]{1,16}[：:])", r"<b>\1</b>", s)
     return s
 
 

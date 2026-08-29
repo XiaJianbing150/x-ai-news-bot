@@ -78,8 +78,9 @@ def _md_to_tg(text: str) -> str:
         r'<a href="\2">\1</a>',
         text,
     )
-    text = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", text)
-    text = re.sub(r"\*([^*]+)\*", r"<i>\1</i>", text)
+    # 非贪婪: 加粗内容里可能含单个 * (如 **Bash(git * main)**)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"\*(.+?)\*", r"<i>\1</i>", text)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
     # 「功能介绍:」这类标签加粗;• 前缀更紧凑
     text = re.sub(
