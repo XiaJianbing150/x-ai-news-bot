@@ -175,5 +175,9 @@ def generate_morning_report(tweets):
             print(f"  剥离正文前的推理过程 {idx} 字符")
             report = report[idx:]
             break
+    # 标题行以 markdown ** 包裹时,去掉行尾残留的 **
+    nl = report.find("\n")
+    if report.startswith("📰") and nl > 0 and report[nl - 2:nl] == "**":
+        report = report[: nl - 2] + report[nl:]
 
     return report
