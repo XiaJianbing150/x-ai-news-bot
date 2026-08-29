@@ -13,7 +13,7 @@ from src.fetcher import (
     fetch_claude_code_releases,
 )
 from src.summarizer import generate_morning_report
-from src.telegram import send_to_telegram
+from src.notify import send_report, send_alert
 from src.archive import save_archive_and_cleanup
 
 
@@ -34,7 +34,7 @@ def main():
         items.extend(tweets)
     except Exception as e:
         traceback.print_exc()
-        send_to_telegram(f"⚠️ AI 早报失败: 抓取 X 推文异常\n<code>{str(e)[:500]}</code>")
+        send_alert(f"⚠️ AI 早报失败: 抓取 X 推文异常\n<code>{str(e)[:500]}</code>")
         sys.exit(1)
 
     print("  --- Anthropic 官博 ---")
@@ -57,7 +57,7 @@ def main():
 
     print(f"\n共抓到 {len(items)} 条内容")
     if not items:
-        send_to_telegram(
+        send_alert(
             "⚠️ <b>AI 早报</b>\n所有数据源都失败了,稍后会自动重试。"
         )
         sys.exit(0)
@@ -70,7 +70,7 @@ def main():
             raise RuntimeError("早报正文为空 (DeepSeek 返回空内容)")
     except Exception as e:
         traceback.print_exc()
-        send_to_telegram(f"⚠️ AI 早报失败: DeepSeek 调用异常\n<code>{str(e)[:500]}</code>")
+        send_alert(f"⚠️ AI 早报失败: DeepSeek 调用异常\n<code>{str(e)[:500]}</code>")
         sys.exit(1)
     print(f"早报长度: {len(report)} 字符")
     print("---- 预览 ----")
@@ -89,10 +89,11 @@ def main():
     except Exception as e:
         print(f"GitHub Trending 抓取失败(忽略): {e!r}")
 
-    # 4. 推送
-    print("\n[3/3] 推送到 Telegram...")
+    # 4. 推送 (QQ 邮箱为主,Telegram 若配置了也发)
+    print("\n[3/3] 推送报告...")
+    subject = f"AI 早报 · {_bj_now_str().split(' ')[0]}"
     try:
-        send_to_telegram(report)
+        send_report(report, subject=subject)
     except Exception as e:
         traceback.print_exc()
         sys.exit(1)
