@@ -173,28 +173,40 @@ _PROMPT = """下面是 GitHub {period} Trending 的 {n} 个项目,每个附上�
 
 要求:
 - 每条 30~60 字,说人话,不堆砌术语
+- 字段名必须严格用「功能」「开发者价值」「稳定性」,前面不要加 emoji 或 **
 - 严格按下面格式输出,每个项目一段,编号对齐,不要输出任何其它内容
 - 不确定的信息(比如 issue 标题无法判断是否严重)就写"未见明显大坑",不要编造
 
 {context}
 """
 
-_FIELD_ALIAS = {"功能": "func", "开发者价值": "dev", "稳定性": "stable"}
+_FIELD_ALIAS = {
+    "功能": "func", "用途": "func", "介绍": "func",
+    "开发者价值": "dev", "价值": "dev", "对开发者": "dev",
+    "稳定性": "stable", "是否稳定": "stable", "风险": "stable",
+}
 
 
 def _parse_enrich(content: str, repos: list) -> int:
     cur = -1
     for raw in content.split("\n"):
-        line = raw.strip()
+        line = raw.strip().replace("\ufe0f", "")  # 去掉变体选择符 (⚖️ = U+2696+U+FE0F)
         if not line:
             continue
-        m = re.match(r"^(\d+)[.．、]\s*(?:\*\*)?([\w\-_.]+/[\w\-_.]+)", line)
+        # 编号行: 1. **owner/name** / **1. owner/name** / 1. owner/name: / 1️⃣ owner/name
+        m = re.match(r"^(?:\*\*)?(\d+)[.．、\)]?\s*(?:\*\*)?([\w\-_.]+/[\w\-_.]+)", line)
         if m:
             idx = int(m.group(1)) - 1
             if 0 <= idx < len(repos):
                 cur = idx
             continue
-        m = re.match(r"^[-•]\s*(功能|开发者价值|稳定性)[：:]\s*(.+)$", line)
+        # 字段行: 容忍 -/•/*、emoji、** 等前缀和变体字段名
+        m = re.match(
+            r"^[-•*\s]*[🔍🎯⚖️✨💡📌✅❗]?\s*(?:\*\*)?"
+            r"(功能|用途|介绍|开发者价值|价值|对开发者|稳定性|是否稳定|风险)"
+            r"(?:\*\*)?[：:]\s*(.+)$",
+            line,
+        )
         if m and cur >= 0:
             field = _FIELD_ALIAS.get(m.group(1))
             if field:
@@ -225,6 +237,8 @@ def enrich_trending(repos: list, period: str = "本周") -> list:
             print("  [trending] DeepSeek 详情生成失败,fallback 翻译简介")
             return repos
         done = _parse_enrich(content, repos)
+        if done == 0:
+            print(f"  [trending] ⚠️ 详情解析 0 条,返回原文前 800 字符供诊断:\n{content[:800]}")
         print(f"  [trending] 详情增强 -> {done}/{len(repos)} 条")
     except Exception as e:
         print(f"  [trending] 详情增强整体失败(忽略): {e!r}")
