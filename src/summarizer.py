@@ -95,6 +95,15 @@ def _build_tweets_block(tweets):
     return "\n\n".join(lines)
 
 
+def _extract_content(data) -> str:
+    """兼容 thinking 模型: content 为空时尝试 reasoning_content。"""
+    msg = (data.get("choices") or [{}])[0].get("message", {})
+    content = (msg.get("content") or "").strip()
+    if not content:
+        content = (msg.get("reasoning_content") or "").strip()
+    return content
+
+
 def generate_morning_report(tweets):
     api_key = os.environ["DEEPSEEK_API_KEY"]
 
@@ -137,8 +146,25 @@ def generate_morning_report(tweets):
         "Content-Type": "application/json",
     }
 
-    r = requests.post(DEEPSEEK_API_URL, json=body, headers=headers, timeout=600)
-    if not r.ok:
-        raise RuntimeError(f"DeepSeek API error {r.status_code}: {r.text[:500]}")
-    data = r.json()
-    return data["choices"][0]["message"]["content"].strip()
+    def _chat(b):
+        r = requests.post(DEEPSEEK_API_URL, json=b, headers=headers, timeout=600)
+        if not r.ok:
+            raise RuntimeError(f"DeepSeek API error {r.status_code}: {r.text[:500]}")
+        return _extract_content(r.json())
+
+    report = _chat(body)
+
+    # 空内容守卫: thinking 模式偶发只吐 reasoning 不吐 content
+    if not report:
+        print("  [WARN] 返回空 content, 去掉 thinking 重试一次...")
+        retry = dict(body)
+        retry.pop("thinking", None)
+        retry.pop("reasoning_effort", None)
+        retry["temperature"] = 0.3
+        report = _chat(retry)
+        if report:
+            print("  重试成功 (thinking off)")
+    if not report:
+        raise RuntimeError("DeepSeek 连续两次返回空内容 (含 reasoning_content 也为空)")
+
+    return report

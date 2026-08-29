@@ -62,10 +62,12 @@ def main():
         )
         sys.exit(0)
 
-    # 3. 总结
+    # 2. 总结
     print("\n[2/3] 调用 DeepSeek 生成早报...")
     try:
         report = generate_morning_report(items)
+        if not report or not report.strip():
+            raise RuntimeError("早报正文为空 (DeepSeek 返回空内容)")
     except Exception as e:
         traceback.print_exc()
         send_to_telegram(f"⚠️ AI 早报失败: DeepSeek 调用异常\n<code>{str(e)[:500]}</code>")

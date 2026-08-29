@@ -478,7 +478,6 @@ def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
     repos = repos[:top_n]
     print(f"  GitHub trending ({since}) -> {len(repos)} repos (direct fetch)")
     return repos
-    return repos
 
 
 _SINCE_LABEL_ZH = {"daily": "今日", "weekly": "本周", "monthly": "本月"}
@@ -533,40 +532,52 @@ def translate_trending_descriptions(repos):
     if not listing:
         return repos
 
-    from .config import DEEPSEEK_API_URL  # 避免循环引用,这里延迟导入
+    from .config import DEEPSEEK_API_URL, DEEPSEEK_MODEL  # 避免循环引用,这里延迟导入
     prompt = (
         f"下面是 {len(repos)} 个 GitHub 项目的英文简介。请翻译成简洁的中文,"
         f"每条不超过 60 字,保留模型名/产品名/技术名等专有英文词。"
         f"严格按原编号输出,每行格式: \"N. 中文翻译\",不要加任何其它说明。\n\n"
         + listing
     )
-    body = {
-        "model": "deepseek-v4-flash",  # 翻译用轻量模型,省钱省时
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2,
-        "max_tokens": 1024,
-        "stream": False,
-    }
-    try:
-        r = requests.post(
-            DEEPSEEK_API_URL,
-            json=body,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            timeout=60,
-        )
-        if not r.ok:
-            print(f"  trending 翻译 HTTP {r.status_code}: {r.text[:200]}")
-            return repos
-        content = r.json()["choices"][0]["message"]["content"].strip()
-        for line in content.split("\n"):
-            m = re.match(r"^\s*(\d+)[.．。]?\s*(.+)$", line.strip())
-            if not m:
+
+    # 模型 fallback 链: 轻量模型优先,失败自动切主模型
+    translate_models = ["deepseek-v4-flash", DEEPSEEK_MODEL]
+    content = ""
+    for model in translate_models:
+        body = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+            "max_tokens": 1024,
+            "stream": False,
+        }
+        try:
+            r = requests.post(
+                DEEPSEEK_API_URL,
+                json=body,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                timeout=60,
+            )
+            if not r.ok:
+                print(f"  trending 翻译 model={model} HTTP {r.status_code}: {r.text[:200]}")
                 continue
-            idx = int(m.group(1)) - 1
-            if 0 <= idx < len(repos):
-                repos[idx]["desc_zh"] = m.group(2).strip()
-        translated = sum(1 for r in repos if r.get("desc_zh"))
-        print(f"  trending 翻译 -> {translated}/{len(repos)} 条")
-    except Exception as e:
-        print(f"  trending 翻译失败(忽略): {e!r}")
+            content = (r.json()["choices"][0]["message"]["content"] or "").strip()
+            if content:
+                print(f"  trending 翻译使用 model={model}")
+                break
+        except Exception as e:
+            print(f"  trending 翻译 model={model} 异常(尝试下一个): {e!r}")
+            continue
+    if not content:
+        print("  trending 翻译全部失败,fallback 显示原英文")
+        return repos
+    for line in content.split("\n"):
+        m = re.match(r"^\s*(\d+)[.．。]?\s*(.+)$", line.strip())
+        if not m:
+            continue
+        idx = int(m.group(1)) - 1
+        if 0 <= idx < len(repos):
+            repos[idx]["desc_zh"] = m.group(2).strip()
+    translated = sum(1 for r in repos if r.get("desc_zh"))
+    print(f"  trending 翻译 -> {translated}/{len(repos)} 条")
     return repos
