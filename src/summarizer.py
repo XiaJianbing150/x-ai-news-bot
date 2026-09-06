@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from datetime import datetime, timezone, timedelta
 
@@ -97,12 +98,12 @@ def _build_tweets_block(tweets):
 
 
 def _extract_content(data) -> str:
-    """兼容 thinking 模型: content 为空时尝试 reasoning_content。"""
-    msg = (data.get("choices") or [{}])[0].get("message", {})
-    content = (msg.get("content") or "").strip()
-    if not content:
-        content = (msg.get("reasoning_content") or "").strip()
-    return content
+    """只接受完整的最终正文,绝不把 reasoning_content 暴露给用户。"""
+    choice = (data.get("choices") or [{}])[0]
+    if choice.get("finish_reason") != "stop":
+        return ""
+    msg = choice.get("message", {})
+    return (msg.get("content") or "").strip()
 
 
 def generate_morning_report(tweets):
@@ -136,8 +137,9 @@ def generate_morning_report(tweets):
     }
     # v4-pro / reasoner 类模型开启深度思考
     use_thinking = DEEPSEEK_THINKING and ("pro" in DEEPSEEK_MODEL or "reasoner" in DEEPSEEK_MODEL)
+    # DeepSeek v4 默认开启 thinking；关闭时也必须显式传 disabled。
+    body["thinking"] = {"type": "enabled" if use_thinking else "disabled"}
     if use_thinking:
-        body["thinking"] = {"type": "enabled"}
         body["reasoning_effort"] = "high"
         # thinking 模型 temperature 通常忽略,删掉避免警告
         body.pop("temperature", None)
@@ -155,27 +157,40 @@ def generate_morning_report(tweets):
 
     report = _chat(body)
 
-    # 空内容守卫: thinking 模式偶发只吐 reasoning 不吐 content
+    # 完整内容守卫: 空 content 或非正常结束时关闭 thinking 重试一次
     if not report:
-        print("  [WARN] 返回空 content, 去掉 thinking 重试一次...")
+        print("  [WARN] 最终正文为空或生成未完整结束,关闭 thinking 重试一次...")
         retry = dict(body)
-        retry.pop("thinking", None)
+        retry["thinking"] = {"type": "disabled"}
         retry.pop("reasoning_effort", None)
         retry["temperature"] = 0.3
         report = _chat(retry)
         if report:
             print("  重试成功 (thinking off)")
     if not report:
-        raise RuntimeError("DeepSeek 连续两次返回空内容 (含 reasoning_content 也为空)")
+        raise RuntimeError("DeepSeek 连续两次未返回完整最终正文")
 
-    # thinking 模式偶发把推理过程混进 content: 正文必定以 📰 标题行开头,
-    # 找到第一个标题行,把之前的"思考独白"全部剥掉
-    for marker in ("<b>📰", "📰 Anthropic"):
-        idx = report.find(marker)
-        if idx > 0:
-            print(f"  剥离正文前的推理过程 {idx} 字符")
-            report = report[idx:]
-            break
+    # 正文必须从唯一标题开始并以关键词行结束。不要尝试从可疑输出中切割正文，
+    # 因为 reasoning 也可能引用同一个标题；格式不完整时直接失败，避免通知泄漏。
+    report = report.lstrip()
+    expected_title = f"📰 Anthropic & OpenAI 速报 · {date_str}"
+    lines = report.rstrip().splitlines()
+    first_line, last_line = lines[0], lines[-1]
+    valid_title_lines = {
+        expected_title,
+        f"<b>{expected_title}</b>",
+        f"**{expected_title}**",
+    }
+    keyword_line = re.fullmatch(
+        r"(?:<i>今日关键词:[^<>\n*]+</i>|\*今日关键词:[^*\n]+\*|今日关键词:[^\n]+)",
+        last_line,
+    )
+    if (
+        first_line not in valid_title_lines
+        or report.count(expected_title) != 1
+        or keyword_line is None
+    ):
+        raise RuntimeError("DeepSeek 未返回完整的最终早报正文")
     # 标题行以 markdown ** 包裹时,去掉行尾残留的 **
     nl = report.find("\n")
     if report.startswith("📰") and nl > 0 and report[nl - 2:nl] == "**":
