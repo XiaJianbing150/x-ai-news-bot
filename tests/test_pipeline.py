@@ -1,8 +1,9 @@
 import json
+import io
 import os
 import tempfile
 import unittest
-from contextlib import ExitStack
+from contextlib import ExitStack, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,6 +20,10 @@ class PipelineTests(unittest.TestCase):
         self.addCleanup(os.chdir, old)
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
+        # Synthetic failure scenarios must not create real Actions annotations
+        # or append fake report/delivery results to the workflow summary.
+        self.stack.enter_context(patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": ""}))
+        self.stack.enter_context(redirect_stdout(io.StringIO()))
         self.stack.enter_context(patch.object(main, "fetch_all_tweets", return_value=[]))
         self.stack.enter_context(patch.object(main, "fetch_anthropic_news", return_value=[]))
         self.stack.enter_context(patch.object(main, "fetch_claude_code_releases", return_value=[]))
