@@ -300,6 +300,52 @@ _ANTHROPIC_NEWS_RE = re.compile(
 )
 
 
+_ANTHROPIC_DATE = (
+    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+    r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+    r"\s+\d{1,2},\s+\d{4}"
+)
+_ANTHROPIC_HEADING = (
+    r"#{2,6}[ \t]+\[([^\[\]\n]+)\]\((https://www\.anthropic\.com/[^\s)]+)\)"
+)
+
+
+def _anthropic_news_entries(text):
+    """Read dated cards and list rows without borrowing a neighboring date.
+
+    The current Jina rendering puts dates outside links and repeats each list
+    row for desktop/mobile. Prefer list titles to the longer featured cards.
+    Category names are deliberately not used to recognize an article.
+    """
+    # A list row is one line, optionally with indented continuation lines.
+    for row in re.finditer(
+        r"(?m)^[ \t]*[-*+][ \t]+(?=#{2,6}[ \t]+\[)"
+        r"([^\n]*(?:\n(?![ \t]*(?:[-*+][ \t]+|#{1,6}[ \t]+))[ \t]+[^\n]*)*)",
+        text,
+    ):
+        heading = re.search(_ANTHROPIC_HEADING, row.group(1))
+        # Dates in titles/descriptions are not publication metadata.
+        metadata = re.sub(r"\[[^\]\n]*\]\([^)]*\)", "", row.group(1))
+        dates = set(re.findall(_ANTHROPIC_DATE, metadata, re.IGNORECASE))
+        if heading and len(dates) == 1:
+            yield dates.pop(), heading.group(1), heading.group(2)
+
+    # Featured cards: date, optional image/link, then a heading. Requiring
+    # adjacency prevents the page clock or another card's date being reused.
+    without_images = re.sub(
+        r"\[!\[[^\]]*\]\([^)]+\)\]\([^)]+\)|!\[[^\]]*\]\([^)]+\)", "", text,
+    )
+    for card in re.finditer(
+        rf"(?m)^[ \t]*({_ANTHROPIC_DATE})\s*{_ANTHROPIC_HEADING}",
+        without_images, re.IGNORECASE,
+    ):
+        yield card.group(1), card.group(2), card.group(3)
+
+    # Preserve the previous Jina layout where the date was inside the link.
+    for match in _ANTHROPIC_NEWS_RE.finditer(text):
+        yield match.group(1), match.group(2), match.group(3)
+
+
 @track_source("anthropic-news")
 def fetch_anthropic_news(hours_lookback: int = None):
     """从 anthropic.com/news 抓产品/公告 (Jina 渲染 markdown)。
@@ -323,26 +369,28 @@ def fetch_anthropic_news(hours_lookback: int = None):
         return []
     text = r.text
     out, seen = [], set()
-    matches = list(_ANTHROPIC_NEWS_RE.finditer(text))
-    if not matches:
-        invalid_response("no recognizable news entries; page may be blocked or format changed")
-        return []
-    for m in matches:
-        date_str, title, link = m.group(1), m.group(2).strip(), m.group(3)
+    valid_entries = 0
+    for date_str, title, link in _anthropic_news_entries(text):
         if link in seen:
             continue
-        seen.add(link)
-        try:
-            # Anthropic news 只给日期(无时分),按当日 23:59 处理,避免边界日被误过滤
-            pub_dt = datetime.strptime(date_str, "%b %d, %Y").replace(
-                hour=23, minute=59, tzinfo=timezone.utc,
-            )
-        except Exception:
+        pub_dt = None
+        for date_format in ("%b %d, %Y", "%B %d, %Y"):
+            try:
+                # News gives a date only; retain the existing end-of-day buffer.
+                pub_dt = datetime.strptime(date_str, date_format).replace(
+                    hour=23, minute=59, tzinfo=timezone.utc,
+                )
+                break
+            except ValueError:
+                pass
+        if pub_dt is None:
             continue
+        seen.add(link)
+        valid_entries += 1
         if pub_dt < cutoff:
             continue
         # title 可能带描述,截一段
-        title = title[:400]
+        title = title.strip()[:400]
         out.append({
             "user": "Anthropic官博",
             "text": title,
@@ -350,6 +398,9 @@ def fetch_anthropic_news(hours_lookback: int = None):
             "published": pub_dt.isoformat(),
             "source": "anthropic-news",
         })
+    if not valid_entries:
+        invalid_response("no recognizable dated news entries; page may be blocked or format changed")
+        return []
     print(f"  Anthropic news -> {len(out)} posts")
     return out
 
