@@ -106,11 +106,12 @@ def _extract_content(data) -> str:
     return (msg.get("content") or "").strip()
 
 
-def generate_morning_report(tweets):
+def generate_morning_report(tweets, report_date: str = None):
     api_key = os.environ["DEEPSEEK_API_KEY"]
 
     # 北京时间日期
-    bj_now = datetime.now(timezone.utc) + timedelta(hours=8)
+    bj_now = (datetime.strptime(report_date, "%Y-%m-%d") if report_date else
+              datetime.now(timezone.utc) + timedelta(hours=8))
     date_str = bj_now.strftime("%Y-%m-%d %A")
 
     if HOURS_LOOKBACK % 24 == 0 and HOURS_LOOKBACK >= 24:
@@ -197,3 +198,4 @@ def generate_morning_report(tweets):
         report = report[: nl - 2] + report[nl:]
 
     return report
+

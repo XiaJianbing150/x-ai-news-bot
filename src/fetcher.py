@@ -6,6 +6,8 @@ import feedparser
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
+from .health import track_source, record_attempt, invalid_response, record_skip
+
 from .config import (
     BLOGGERS,
     SKIP_X_ACCOUNTS,
@@ -50,7 +52,14 @@ def _http_get(url: str, headers=None):
     h = {"User-Agent": UA, "Accept": "application/rss+xml,application/atom+xml,*/*"}
     if headers:
         h.update(headers)
-    return requests.get(url, timeout=REQUEST_TIMEOUT, headers=h)
+    try:
+        response = requests.get(url, timeout=REQUEST_TIMEOUT, headers=h)
+    except Exception as exc:
+        record_attempt(url, error=type(exc).__name__)
+        raise
+    record_attempt(url, http_status=response.status_code,
+                   error=None if response.status_code == 200 else f"HTTP {response.status_code}")
+    return response
 
 
 def _looks_like_garbage_feed(feed) -> bool:
@@ -90,13 +99,16 @@ def _try_rss(username: str):
             # 内容判别:HTML 反爬页直接跳过
             head = r.content[:200].lower()
             if b"<!doctype html" in head or b"<html" in head[:100]:
+                invalid_response("anti-bot HTML")
                 last_err = "anti-bot HTML"
                 continue
             feed = feedparser.parse(r.content)
-            if not feed.entries:
-                last_err = "no entries"
+            if not feed.get("version") or (feed.get("bozo") and not feed.entries):
+                invalid_response("invalid feed")
+                last_err = "invalid feed"
                 continue
             if _looks_like_garbage_feed(feed):
+                invalid_response("garbage/whitelist page")
                 last_err = "garbage/whitelist page"
                 continue
 
@@ -118,11 +130,11 @@ def _try_rss(username: str):
                 })
                 if len(tweets) >= MAX_TWEETS_PER_BLOGGER:
                     break
-            if tweets:
-                return tweets, url, None
-            last_err = "all entries out of window"
+            # A valid feed with no recent items is healthy, not a fetch failure.
+            return tweets, url, None
         except Exception as e:
-            last_err = repr(e)[:120]
+            last_err = type(e).__name__
+            invalid_response(last_err)
             continue
     return [], None, last_err
 
@@ -179,21 +191,28 @@ def _try_jina(username: str):
     try:
         r = _http_get(url, headers=headers)
     except Exception as e:
-        return [], f"jina exception: {repr(e)[:100]}"
+        return [], f"jina exception: {type(e).__name__}"
     if r.status_code != 200:
         return [], f"jina HTTP {r.status_code}"
     text = r.text
     if "Title:" not in text[:200] or len(text) < 300:
+        invalid_response("jina empty/blocked")
         return [], "jina empty/blocked"
+    title = re.search(r"^Title:\s*(.*)$", text, re.MULTILINE)
+    if title and any(marker in title.group(1).lower() for marker in RSS_GARBAGE_MARKERS):
+        invalid_response("jina blocked page")
+        return [], "jina blocked page"
     tweets = _parse_jina_markdown(username, text)
     if not tweets:
+        invalid_response("jina parsed 0 chunks")
         return [], "jina parsed 0 chunks"
     return tweets, None
 
 
+@track_source(lambda username: f"x:{username}")
 def fetch_user_tweets(username: str):
     tweets, source, err = _try_rss(username)
-    if tweets:
+    if source is not None:
         return tweets, source
 
     # RSS 全失败,转 Jina
@@ -209,6 +228,7 @@ def fetch_all_tweets():
     all_tweets = []
     for u in BLOGGERS:
         if u in SKIP_X_ACCOUNTS:
+            record_skip(f"x:{u}", "configured skip; official blog used instead")
             print(f"  @{u:<18} -> SKIP (X 只返回 pinned 老闻,改用官博源)")
             continue
         tweets, source = fetch_user_tweets(u)
@@ -220,6 +240,7 @@ def fetch_all_tweets():
     return all_tweets
 
 
+@track_source("openai-blog")
 def fetch_openai_blog(hours_lookback: int = None):
     """从 OpenAI 官博 RSS 抓产品更新 (权威源)。
     比推文窗口多 48h: 官博发布常比 X 公告晚 1-2 天,且不希望漏掉边界日。
@@ -230,10 +251,14 @@ def fetch_openai_blog(hours_lookback: int = None):
     try:
         r = _http_get("https://openai.com/news/rss.xml")
     except Exception as e:
-        print(f"  OpenAI blog 抓取失败: {e!r}")
+        print(f"  OpenAI blog 抓取失败: {type(e).__name__}")
         return []
     if r.status_code != 200:
         print(f"  OpenAI blog HTTP {r.status_code}")
+        return []
+    parsed = feedparser.parse(r.content)
+    if not parsed.get("version") or parsed.get("bozo"):
+        invalid_response("invalid RSS document")
         return []
     items = re.findall(r"<item>(.*?)</item>", r.text, re.DOTALL)
     out = []
@@ -275,6 +300,7 @@ _ANTHROPIC_NEWS_RE = re.compile(
 )
 
 
+@track_source("anthropic-news")
 def fetch_anthropic_news(hours_lookback: int = None):
     """从 anthropic.com/news 抓产品/公告 (Jina 渲染 markdown)。
     +48h 缓冲避免边界日被误过滤。
@@ -290,14 +316,18 @@ def fetch_anthropic_news(hours_lookback: int = None):
     try:
         r = _http_get(url, headers=headers)
     except Exception as e:
-        print(f"  Anthropic news 抓取失败: {e!r}")
+        print(f"  Anthropic news 抓取失败: {type(e).__name__}")
         return []
     if r.status_code != 200:
         print(f"  Anthropic news HTTP {r.status_code}")
         return []
     text = r.text
     out, seen = [], set()
-    for m in _ANTHROPIC_NEWS_RE.finditer(text):
+    matches = list(_ANTHROPIC_NEWS_RE.finditer(text))
+    if not matches:
+        invalid_response("no recognizable news entries; page may be blocked or format changed")
+        return []
+    for m in matches:
         date_str, title, link = m.group(1), m.group(2).strip(), m.group(3)
         if link in seen:
             continue
@@ -324,6 +354,7 @@ def fetch_anthropic_news(hours_lookback: int = None):
     return out
 
 
+@track_source("claude-code-releases")
 def fetch_claude_code_releases(hours_lookback: int = None):
     """从 GitHub releases atom feed 抓 Claude Code 版本说明 (权威源)。
     覆盖 Anthropic 官博不会发的产品小功能更新 (如 Agent View / /goal 等)。
@@ -335,10 +366,14 @@ def fetch_claude_code_releases(hours_lookback: int = None):
     try:
         r = _http_get("https://github.com/anthropics/claude-code/releases.atom")
     except Exception as e:
-        print(f"  Claude Code releases 抓取失败: {e!r}")
+        print(f"  Claude Code releases 抓取失败: {type(e).__name__}")
         return []
     if r.status_code != 200:
         print(f"  Claude Code releases HTTP {r.status_code}")
+        return []
+    parsed = feedparser.parse(r.content)
+    if not parsed.get("version") or parsed.get("bozo"):
+        invalid_response("invalid Atom document")
         return []
     entries = re.findall(r"<entry>(.*?)</entry>", r.text, re.DOTALL)
     out = []
@@ -374,6 +409,7 @@ def fetch_claude_code_releases(hours_lookback: int = None):
     return out
 
 
+@track_source("arxiv")
 def fetch_arxiv_papers():
     cutoff = datetime.now(timezone.utc) - timedelta(hours=HOURS_LOOKBACK + 24)
     seen_ids = set()
@@ -385,6 +421,9 @@ def fetch_arxiv_papers():
                 print(f"  arXiv {url}: HTTP {r.status_code}")
                 continue
             feed = feedparser.parse(r.content)
+            if not feed.get("version") or feed.get("bozo") or _looks_like_garbage_feed(feed):
+                invalid_response("invalid or blocked feed")
+                continue
             for entry in feed.entries:
                 pub_dt = _entry_datetime(entry)
                 if pub_dt and pub_dt < cutoff:
@@ -401,7 +440,8 @@ def fetch_arxiv_papers():
                     "source": "arxiv",
                 })
         except Exception as e:
-            print(f"  arXiv {url} failed: {e!r}")
+            invalid_response(type(e).__name__)
+            print(f"  arXiv fetch failed: {type(e).__name__}")
     papers = papers[:ARXIV_MAX_PAPERS]
     print(f"  arXiv -> {len(papers)} papers")
     return papers
@@ -416,6 +456,7 @@ _GH_REPO_HEAD = re.compile(
 _GH_DIRECT_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/120.0"
 
 
+@track_source("github-trending")
 def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
     """抓 github.com/trending top N,直接 HTTPS 拉 HTML 解析。
     历史上走过 r.jina.ai,但 jina 对 github.com 长期返回 HTTP 451(Unavailable
@@ -428,7 +469,7 @@ def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
     try:
         r = _http_get(url, headers=headers)
     except Exception as e:
-        print(f"  GitHub trending fetch failed: {e!r}")
+        print(f"  GitHub trending fetch failed: {type(e).__name__}")
         return []
     if r.status_code != 200:
         print(f"  GitHub trending: HTTP {r.status_code}")
@@ -474,6 +515,8 @@ def fetch_github_trending(top_n: int = 5, since: str = "weekly"):
             "since": since,
         })
 
+    if not repos:
+        invalid_response("no recognizable trending repositories; page may be blocked or format changed")
     repos.sort(key=lambda x: x["stars_num"], reverse=True)
     repos = repos[:top_n]
     print(f"  GitHub trending ({since}) -> {len(repos)} repos (direct fetch)")
@@ -590,7 +633,7 @@ def translate_trending_descriptions(repos):
                 break
             print(f"  trending 翻译 model={model} 返回空 content,尝试下一个模型")
         except Exception as e:
-            print(f"  trending 翻译 model={model} 异常(尝试下一个): {e!r}")
+            print(f"  trending 翻译 model={model} 异常(尝试下一个): {type(e).__name__}")
             continue
     if not content:
         print("  trending 翻译全部失败,fallback 显示原英文")
@@ -613,3 +656,4 @@ def translate_trending_descriptions(repos):
     translated = sum(1 for r in repos if r.get("desc_zh"))
     print(f"  trending 翻译 -> {translated}/{len(repos)} 条")
     return repos
+

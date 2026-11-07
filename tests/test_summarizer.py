@@ -59,7 +59,7 @@ def completion(*, content, reasoning_content="", finish_reason="stop"):
 
 
 class GenerateMorningReportTests(unittest.TestCase):
-    def _generate(self, responses):
+    def _generate(self, responses, report_date=None):
         sent_bodies = []
         queue = list(responses)
 
@@ -74,9 +74,15 @@ class GenerateMorningReportTests(unittest.TestCase):
             patch.object(summarizer.requests, "post", side_effect=fake_post),
         ):
             report = summarizer.generate_morning_report(
-                [{"user": "OpenAI官博", "text": "news", "link": "https://example.com", "source": "openai-blog"}]
+                [{"user": "OpenAI官博", "text": "news", "link": "https://example.com", "source": "openai-blog"}],
+                **({"report_date": report_date} if report_date else {}),
             )
         return report, sent_bodies
+
+    def test_explicit_report_date_survives_midnight_during_generation(self):
+        expected = VALID_REPORT.replace("2026-09-06 Sunday", "2026-09-05 Saturday")
+        report, _ = self._generate([completion(content=expected)], report_date="2026-09-05")
+        self.assertEqual(expected, report)
 
     def test_reasoning_only_response_is_not_promoted_to_report(self):
         internal_plan = "分析中\n<b>📰 Anthropic & OpenAI 速报 · 示例</b>\n可能组织成……"
@@ -143,3 +149,4 @@ class GenerateMorningReportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -15,30 +15,35 @@ def _channels() -> List[str]:
     return chans
 
 
-def send_report(text: str, subject: str = "AI 早报") -> None:
-    """正式早报: 发给所有已配置的渠道。至少一个渠道必须配好,否则抛错。"""
-    chans = _channels()
+def send_report(text: str, subject: str = "AI 早报", channels=None, on_result=None) -> dict:
+    """Attempt every selected channel independently; return delivery evidence.
+
+    SMTP errors are conservatively unknown: the server may have accepted the
+    message before the connection failed. Never expose exception text/secrets.
+    """
+    chans = _channels() if channels is None else channels
     if not chans:
-        raise RuntimeError(
-            "未配置任何发送渠道: 请设置 QQ_SMTP_USER / QQ_SMTP_AUTH_CODE / MAIL_TO "
-            "(QQ 邮箱),或 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID (Telegram)"
-        )
-    if "email" in chans:
-        mailer.send_to_email(subject, text)
-        print("  ✅ 已发送到 QQ 邮箱")
-    if "telegram" in chans:
-        telegram.send_to_telegram(text)
-        print("  ✅ 已发送到 Telegram")
-
-
-def send_alert(text: str, subject: str = "AI 早报 ⚠️") -> None:
-    """告警消息: 发给已配置的渠道,单个渠道失败不影响其他渠道,也不抛错。"""
-    for c in _channels():
+        raise RuntimeError("未配置任何发送渠道")
+    results = {}
+    for channel in chans:
         try:
-            if c == "email":
+            if channel == "email":
                 mailer.send_to_email(subject, text)
+                result = {"status": "sent"}
+            elif channel == "telegram":
+                result = telegram.send_to_telegram(text)
             else:
-                telegram.send_to_telegram(text)
-            print(f"  ✅ 告警已发送 ({c})")
-        except Exception as e:
-            print(f"  ❌ 告警发送失败 ({c}): {e!r}")
+                raise ValueError("Unknown notification channel")
+        except Exception as exc:
+            result = {"status": "unknown", "reason": type(exc).__name__}
+        results[channel] = result
+        print(f"  通知 {channel}: {result['status']}")
+        if on_result is not None:
+            on_result(channel, result)
+    return results
+
+
+def send_alert(text: str, subject: str = "AI 早报 ⚠️") -> dict:
+    """Existing configured destinations only; no exception escapes the alert."""
+    chans = _channels()
+    return send_report(text, subject=subject, channels=chans) if chans else {}

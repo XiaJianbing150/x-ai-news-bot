@@ -27,13 +27,14 @@ def _html_to_text(html: str) -> str:
     return text
 
 
-def save_archive_and_cleanup(report: str) -> str:
+def save_archive_and_cleanup(report: str, report_date: str = None) -> str:
     """保存 report 到 archive/YYYY-MM-DD.md(北京日期),清理超 7 天旧文件。
     返回保存的文件路径。
     """
     os.makedirs(ARCHIVE_DIR, exist_ok=True)
     bj_now = datetime.now(timezone.utc) + timedelta(hours=8)
-    date_str = bj_now.strftime("%Y-%m-%d")
+    date_str = report_date or bj_now.strftime("%Y-%m-%d")
+    logical_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     path = os.path.join(ARCHIVE_DIR, f"{date_str}.md")
 
     body = _html_to_text(report)
@@ -43,7 +44,7 @@ def save_archive_and_cleanup(report: str) -> str:
     print(f"  saved archive -> {path} ({len(body)} chars)")
 
     # 清理超期文件:保留含今天在内的最近 RETENTION_DAYS 天 (天数严格 ≤ 7)
-    cutoff = bj_now.date() - timedelta(days=RETENTION_DAYS - 1)
+    cutoff = logical_date - timedelta(days=RETENTION_DAYS - 1)
     removed = []
     for name in os.listdir(ARCHIVE_DIR):
         if not name.endswith(".md"):
@@ -58,3 +59,4 @@ def save_archive_and_cleanup(report: str) -> str:
     if removed:
         print(f"  cleaned {len(removed)} old archives: {', '.join(sorted(removed))}")
     return path
+

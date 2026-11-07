@@ -2,7 +2,7 @@ name: AI News Bot - Daily
 
 on:
   schedule:
-    # 北京时间 05:37 = UTC 前一天 21:37；提前并避开整点高峰，目标约 07:00 收到邮件
+    # 北京时间 05:37 = UTC 前一天 21:37；保持原有时间
     - cron: '37 21 * * *'
   workflow_dispatch:
     inputs:
@@ -10,19 +10,39 @@ on:
         description: '回溯小时数 (默认 168 = 7 天)'
         required: false
         default: '168'
+      dry_run:
+        description: '只生成并归档，不发送通知 (取消勾选才会发送)'
+        type: boolean
+        default: true
 
 permissions:
-  contents: write   # 允许 commit & push archive/ 回 main
+  contents: write
+
+# Shared by manual/scheduled runs. Do not cancel a run after it begins sending.
+concurrency:
+  group: ai-news-daily-main
+  cancel-in-progress: false
 
 jobs:
   send-morning-report:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      QQ_SMTP_USER: ${{ secrets.QQ_SMTP_USER }}
+      QQ_SMTP_AUTH_CODE: ${{ secrets.QQ_SMTP_AUTH_CODE }}
+      MAIL_TO: ${{ secrets.MAIL_TO }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+      GITHUB_TOKEN: ${{ github.token }}
+      HOURS_LOOKBACK: ${{ inputs.hours_lookback || '168' }}
     steps:
-      - name: Checkout
+      - name: Checkout latest main
         uses: actions/checkout@v4
         with:
-          # 取完整历史,push 不会因 shallow 拒绝
+          ref: main
           fetch-depth: 0
 
       - name: Set up Python
@@ -34,31 +54,36 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
-      - name: Run bot
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          # QQ 邮箱 (推荐): QQ 邮箱 → 设置 → 账户 → 开启 SMTP 服务拿授权码
-          QQ_SMTP_USER: ${{ secrets.QQ_SMTP_USER }}
-          QQ_SMTP_AUTH_CODE: ${{ secrets.QQ_SMTP_AUTH_CODE }}
-          MAIL_TO: ${{ secrets.MAIL_TO }}
-          # Telegram (可选)
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # GitHub API token: 提高 trending 详情抓取的限速 (5000 次/时)
-          GITHUB_TOKEN: ${{ github.token }}
-          HOURS_LOOKBACK: ${{ inputs.hours_lookback || '168' }}
-        run: python main.py
+      - name: Run regression tests
+        run: python -m unittest discover -v
 
-      - name: Commit archive
-        if: always()  # 即便 bot 主流程失败,只要写过文件就尝试存
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add archive/ 2>/dev/null || true
-          if git diff --staged --quiet; then
-            echo "no archive changes to commit"
-          else
-            git commit -m "chore(archive): $(TZ=Asia/Shanghai date +%Y-%m-%d) AI 早报"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
+      - name: Generate and archive report
+        run: python main.py --stage generate
+
+      - name: Persist archive before notifications
+        run: bash .github/scripts/commit-archive.sh generated
+
+      - name: Reserve notification attempts
+        if: ${{ inputs.dry_run != true }}
+        run: python main.py --stage reserve
+
+      - name: Persist reservations before sending
+        if: ${{ inputs.dry_run != true }}
+        run: bash .github/scripts/commit-archive.sh reserved
+
+      - name: Send notifications independently
+        if: ${{ inputs.dry_run != true }}
+        run: python main.py --stage send
+
+      - name: Persist final run status
+        if: always()
+        run: bash .github/scripts/commit-archive.sh result
+
+      - name: Upload archive and status backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: morning-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: archive/
+          if-no-files-found: ignore
+          retention-days: 14
