@@ -1,0 +1,509 @@
+{
+  "date": "2026-11-10",
+  "generation": "ready",
+  "notifications": {},
+  "updated_at": "2026-11-10T03:46:31.717587+00:00",
+  "sources": [
+    {
+      "source": "x:AnthropicAI",
+      "status": "skipped",
+      "count": 0,
+      "attempts": [],
+      "reason": "configured skip; official blog used instead"
+    },
+    {
+      "source": "x:claudeai",
+      "status": "skipped",
+      "count": 0,
+      "attempts": [],
+      "reason": "configured skip; official blog used instead"
+    },
+    {
+      "source": "x:darioamodei",
+      "status": "partial",
+      "count": 1,
+      "attempts": [
+        {
+          "endpoint": "https://xcancel.com/darioamodei/rss",
+          "http_status": 451,
+          "status": "failed",
+          "error": "HTTP 451"
+        },
+        {
+          "endpoint": "https://nitter.privacydev.net/darioamodei/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.poast.org/darioamodei/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.tiekoetter.com/darioamodei/rss",
+          "http_status": 200,
+          "status": "failed",
+          "error": "anti-bot HTML"
+        },
+        {
+          "endpoint": "https://nitter.space/darioamodei/rss",
+          "http_status": 403,
+          "status": "failed",
+          "error": "HTTP 403"
+        },
+        {
+          "endpoint": "https://rsshub.app/twitter/user/darioamodei",
+          "http_status": 404,
+          "status": "failed",
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "https://rsshub.rssforever.com/twitter/user/darioamodei",
+          "http_status": 503,
+          "status": "failed",
+          "error": "HTTP 503"
+        },
+        {
+          "endpoint": "https://rsshub.pseudoyu.com/twitter/user/darioamodei",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://r.jina.ai/https://x.com/darioamodei",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "x:alexalbert__",
+      "status": "partial",
+      "count": 1,
+      "attempts": [
+        {
+          "endpoint": "https://xcancel.com/alexalbert__/rss",
+          "http_status": 451,
+          "status": "failed",
+          "error": "HTTP 451"
+        },
+        {
+          "endpoint": "https://nitter.privacydev.net/alexalbert__/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.poast.org/alexalbert__/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.tiekoetter.com/alexalbert__/rss",
+          "http_status": 200,
+          "status": "failed",
+          "error": "anti-bot HTML"
+        },
+        {
+          "endpoint": "https://nitter.space/alexalbert__/rss",
+          "http_status": 403,
+          "status": "failed",
+          "error": "HTTP 403"
+        },
+        {
+          "endpoint": "https://rsshub.app/twitter/user/alexalbert__",
+          "http_status": 404,
+          "status": "failed",
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "https://rsshub.rssforever.com/twitter/user/alexalbert__",
+          "http_status": 503,
+          "status": "failed",
+          "error": "HTTP 503"
+        },
+        {
+          "endpoint": "https://rsshub.pseudoyu.com/twitter/user/alexalbert__",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://r.jina.ai/https://x.com/alexalbert__",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "x:AmandaAskell",
+      "status": "partial",
+      "count": 2,
+      "attempts": [
+        {
+          "endpoint": "https://xcancel.com/AmandaAskell/rss",
+          "http_status": 451,
+          "status": "failed",
+          "error": "HTTP 451"
+        },
+        {
+          "endpoint": "https://nitter.privacydev.net/AmandaAskell/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.poast.org/AmandaAskell/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.tiekoetter.com/AmandaAskell/rss",
+          "http_status": 200,
+          "status": "failed",
+          "error": "anti-bot HTML"
+        },
+        {
+          "endpoint": "https://nitter.space/AmandaAskell/rss",
+          "http_status": 403,
+          "status": "failed",
+          "error": "HTTP 403"
+        },
+        {
+          "endpoint": "https://rsshub.app/twitter/user/AmandaAskell",
+          "http_status": 404,
+          "status": "failed",
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "https://rsshub.rssforever.com/twitter/user/AmandaAskell",
+          "http_status": 503,
+          "status": "failed",
+          "error": "HTTP 503"
+        },
+        {
+          "endpoint": "https://rsshub.pseudoyu.com/twitter/user/AmandaAskell",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://r.jina.ai/https://x.com/AmandaAskell",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "x:OpenAI",
+      "status": "skipped",
+      "count": 0,
+      "attempts": [],
+      "reason": "configured skip; official blog used instead"
+    },
+    {
+      "source": "x:sama",
+      "status": "partial",
+      "count": 5,
+      "attempts": [
+        {
+          "endpoint": "https://xcancel.com/sama/rss",
+          "http_status": 451,
+          "status": "failed",
+          "error": "HTTP 451"
+        },
+        {
+          "endpoint": "https://nitter.privacydev.net/sama/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.poast.org/sama/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.tiekoetter.com/sama/rss",
+          "http_status": 200,
+          "status": "failed",
+          "error": "anti-bot HTML"
+        },
+        {
+          "endpoint": "https://nitter.space/sama/rss",
+          "http_status": 403,
+          "status": "failed",
+          "error": "HTTP 403"
+        },
+        {
+          "endpoint": "https://rsshub.app/twitter/user/sama",
+          "http_status": 404,
+          "status": "failed",
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "https://rsshub.rssforever.com/twitter/user/sama",
+          "http_status": 503,
+          "status": "failed",
+          "error": "HTTP 503"
+        },
+        {
+          "endpoint": "https://rsshub.pseudoyu.com/twitter/user/sama",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://r.jina.ai/https://x.com/sama",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "x:gdb",
+      "status": "partial",
+      "count": 1,
+      "attempts": [
+        {
+          "endpoint": "https://xcancel.com/gdb/rss",
+          "http_status": 451,
+          "status": "failed",
+          "error": "HTTP 451"
+        },
+        {
+          "endpoint": "https://nitter.privacydev.net/gdb/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.poast.org/gdb/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.tiekoetter.com/gdb/rss",
+          "http_status": 200,
+          "status": "failed",
+          "error": "anti-bot HTML"
+        },
+        {
+          "endpoint": "https://nitter.space/gdb/rss",
+          "http_status": 403,
+          "status": "failed",
+          "error": "HTTP 403"
+        },
+        {
+          "endpoint": "https://rsshub.app/twitter/user/gdb",
+          "http_status": 404,
+          "status": "failed",
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "https://rsshub.rssforever.com/twitter/user/gdb",
+          "http_status": 503,
+          "status": "failed",
+          "error": "HTTP 503"
+        },
+        {
+          "endpoint": "https://rsshub.pseudoyu.com/twitter/user/gdb",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://r.jina.ai/https://x.com/gdb",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "x:simonw",
+      "status": "partial",
+      "count": 1,
+      "attempts": [
+        {
+          "endpoint": "https://xcancel.com/simonw/rss",
+          "http_status": 451,
+          "status": "failed",
+          "error": "HTTP 451"
+        },
+        {
+          "endpoint": "https://nitter.privacydev.net/simonw/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.poast.org/simonw/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.tiekoetter.com/simonw/rss",
+          "http_status": 200,
+          "status": "failed",
+          "error": "anti-bot HTML"
+        },
+        {
+          "endpoint": "https://nitter.space/simonw/rss",
+          "http_status": 403,
+          "status": "failed",
+          "error": "HTTP 403"
+        },
+        {
+          "endpoint": "https://rsshub.app/twitter/user/simonw",
+          "http_status": 404,
+          "status": "failed",
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "https://rsshub.rssforever.com/twitter/user/simonw",
+          "http_status": 503,
+          "status": "failed",
+          "error": "HTTP 503"
+        },
+        {
+          "endpoint": "https://rsshub.pseudoyu.com/twitter/user/simonw",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://r.jina.ai/https://x.com/simonw",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "x:karpathy",
+      "status": "partial",
+      "count": 5,
+      "attempts": [
+        {
+          "endpoint": "https://xcancel.com/karpathy/rss",
+          "http_status": 451,
+          "status": "failed",
+          "error": "HTTP 451"
+        },
+        {
+          "endpoint": "https://nitter.privacydev.net/karpathy/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.poast.org/karpathy/rss",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://nitter.tiekoetter.com/karpathy/rss",
+          "http_status": 200,
+          "status": "failed",
+          "error": "anti-bot HTML"
+        },
+        {
+          "endpoint": "https://nitter.space/karpathy/rss",
+          "http_status": 403,
+          "status": "failed",
+          "error": "HTTP 403"
+        },
+        {
+          "endpoint": "https://rsshub.app/twitter/user/karpathy",
+          "http_status": 404,
+          "status": "failed",
+          "error": "HTTP 404"
+        },
+        {
+          "endpoint": "https://rsshub.rssforever.com/twitter/user/karpathy",
+          "http_status": 503,
+          "status": "failed",
+          "error": "HTTP 503"
+        },
+        {
+          "endpoint": "https://rsshub.pseudoyu.com/twitter/user/karpathy",
+          "http_status": null,
+          "status": "failed",
+          "error": "ConnectionError"
+        },
+        {
+          "endpoint": "https://r.jina.ai/https://x.com/karpathy",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "anthropic-news",
+      "status": "ok",
+      "count": 1,
+      "attempts": [
+        {
+          "endpoint": "https://r.jina.ai/https://www.anthropic.com/news",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "claude-code-releases",
+      "status": "ok",
+      "count": 5,
+      "attempts": [
+        {
+          "endpoint": "https://github.com/anthropics/claude-code/releases.atom",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "openai-blog",
+      "status": "ok",
+      "count": 29,
+      "attempts": [
+        {
+          "endpoint": "https://openai.com/news/rss.xml",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source": "github-trending",
+      "status": "ok",
+      "count": 5,
+      "attempts": [
+        {
+          "endpoint": "https://github.com/trending",
+          "http_status": 200,
+          "status": "ok",
+          "error": null
+        }
+      ]
+    }
+  ],
+  "archive": "archive/2026-11-10.md"
+}
