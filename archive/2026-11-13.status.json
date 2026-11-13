@@ -3,17 +3,20 @@
   "generation": "ready",
   "notifications": {
     "email": {
-      "status": "unknown",
-      "reason": "reserved_before_send",
-      "reservation": "826da6b1199b4c00830411e5c965a310"
+      "status": "sent"
     },
     "telegram": {
-      "status": "unknown",
-      "reason": "reserved_before_send",
-      "reservation": "826da6b1199b4c00830411e5c965a310"
+      "status": "sent",
+      "sent_parts": 3,
+      "message_ids": [
+        1673,
+        1674,
+        1675
+      ],
+      "attempts": 3
     }
   },
-  "updated_at": "2026-11-13T02:05:22.113768+00:00",
+  "updated_at": "2026-11-13T02:05:31.243683+00:00",
   "sources": [
     {
       "source": "x:AnthropicAI",
