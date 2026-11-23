@@ -1,8 +1,19 @@
 {
   "date": "2026-11-23",
   "generation": "ready",
-  "notifications": {},
-  "updated_at": "2026-11-23T01:56:44.113433+00:00",
+  "notifications": {
+    "email": {
+      "status": "unknown",
+      "reason": "reserved_before_send",
+      "reservation": "c2af07a8ff40409da019cb6fca21157f"
+    },
+    "telegram": {
+      "status": "unknown",
+      "reason": "reserved_before_send",
+      "reservation": "c2af07a8ff40409da019cb6fca21157f"
+    }
+  },
+  "updated_at": "2026-11-23T01:56:45.410076+00:00",
   "sources": [
     {
       "source": "x:AnthropicAI",
